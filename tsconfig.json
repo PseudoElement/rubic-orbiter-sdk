@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "declaration": true /* Generates corresponding '.d.ts' file. */,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "UMD",
+    "moduleResolution": "Node",
+    "outDir": "./dist" /* Redirect output structure to the directory. */,
+    "strict": true,
+    "target": "ES2020",
+  },
+  "include": ["./src/**/*", "test/server.ts"],
+  "exclude": ["test", "./src/**/*.spec.ts", "./src/**/*.mock.ts", "./src/**/*.handlers.ts"]
+}
