@@ -51,20 +51,20 @@ export async function XVMSwap(
       }
     );
   } else {
-    const gasLimit = await contractInstance.swap.estimateGas({
-      from: account,
-      gas: 5000000,
-    });
-    const swapTx = await contractInstance.swap(
+    const gasLimit = await contractInstance.swap.estimateGas(
       selectMakerConfig.recipient,
       t1Address,
       value,
       data
     );
-    await swapTx.wait();
-    return await contractInstance.send({
-      from: account,
-      gas: gasLimit,
-    });
+    return await contractInstance.swap(
+      selectMakerConfig.recipient,
+      t1Address,
+      value,
+      data,
+      {
+        gasLimit,
+      }
+    );
   }
 }

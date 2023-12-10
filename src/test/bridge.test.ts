@@ -57,6 +57,26 @@ describe("bridge tests", () => {
     expect(result.hash).toBeDefined;
   });
 
+  test("xvm ERC20 cross test", async () => {
+    const xvmCrossConfig = {
+      fromChainID: "5",
+      fromCurrency: "USDC",
+      toChainID: "420",
+      toCurrency: "USDC",
+      transferValue: 1,
+      // add crossAddressReceipt: owner For test xvm
+      crossAddressReceipt: owner,
+    };
+    let result = null;
+    try {
+      result = await bridge.toBridge(xvmCrossConfig);
+    } catch (error: any) {
+      console.log(error.message);
+    }
+    console.log(result.hash);
+    expect(result.hash).toBeDefined;
+  });
+
   test("evm ETH cross to op test", async () => {
     const evmCrossConfig = {
       fromChainID: "5",
@@ -75,7 +95,7 @@ describe("bridge tests", () => {
     expect(result.hash).toBeDefined;
   });
 
-  test.only("evm erc20 cross test", async () => {
+  test("evm erc20 cross test", async () => {
     const opRpcs = await chainsService.getChainInfoAsync(420);
     const opProvider = new ethers.JsonRpcProvider(opRpcs?.rpc?.[0]);
     provider = opProvider;

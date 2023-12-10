@@ -177,16 +177,18 @@ export async function getTransferGasLimit(
 export function getRealTransferValue(
   selectMakerConfig: ICrossRule,
   transferValue: number | string
-) {
+): BigInt {
   if (!Object.keys(selectMakerConfig).length) {
     throw new Error(
       "get real transfer value failed, selectMakerConfig can not be empty!"
     );
   }
-  return new BigNumber(transferValue)
-    .plus(new BigNumber(selectMakerConfig.tradingFee))
-    .multipliedBy(new BigNumber(10 ** selectMakerConfig.fromChain.decimals))
-    .toFixed();
+  return BigInt(
+    new BigNumber(transferValue)
+      .plus(new BigNumber(selectMakerConfig.tradingFee))
+      .multipliedBy(new BigNumber(10 ** selectMakerConfig.fromChain.decimals))
+      .toFixed()
+  );
 }
 
 export function sleep(ms: number) {

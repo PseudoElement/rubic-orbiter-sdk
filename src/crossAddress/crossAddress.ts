@@ -72,25 +72,27 @@ export class CrossAddress {
   async getAllowance(
     contractErc20: Contract,
     contractAddress = this.contractAddress
-  ) {
+  ): Promise<BigInt> {
     const ownerAddress = await this.signer.getAddress();
     return await contractErc20.allowance(ownerAddress, contractAddress);
   }
 
   async approveERC20(
     tokenAddress: string,
-    amount: BigNumber,
+    amount: BigInt,
     contractAddress = this.contractAddress
   ) {
     await this.checkNetworkId();
-    const contract = new ethers.Contract(tokenAddress, Coin_ABI, this.provider);
-    const currentAllowance = await this.getAllowance(contract, contractAddress);
+    const contract = new ethers.Contract(tokenAddress, Coin_ABI, this.signer);
+    const currentAllowance: BigInt = await this.getAllowance(
+      contract,
+      contractAddress
+    );
     await contract.approve(contractAddress, amount);
     try {
-      // Waitting approve succeed
       for (let index = 0; index < 5000; index++) {
         const allowance = await this.getAllowance(contract, contractAddress);
-        if (!currentAllowance.eq(allowance)) {
+        if (!(currentAllowance === allowance)) {
           if (amount > allowance) {
             throw new Error(`Approval amount is insufficient`);
           }
@@ -174,7 +176,7 @@ export class CrossAddress {
 
   async contractApprove(
     tokenAddress: string,
-    amount: BigNumber,
+    amount: BigInt,
     contractAddress?: string
   ) {
     if (!contractAddress) throw new Error("contract approve address is empty!");
@@ -184,7 +186,7 @@ export class CrossAddress {
       this.provider
     );
     const allowance = await this.getAllowance(contractErc20, contractAddress);
-    if (amount.gt(allowance)) {
+    if (amount > allowance) {
       await this.approveERC20(tokenAddress, amount, contractAddress);
     }
   }

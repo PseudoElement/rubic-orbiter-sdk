@@ -168,11 +168,7 @@ export default class CrossControl {
         this.signer,
         contractAddress
       );
-      await crossAddress.contractApprove(
-        tokenAddress,
-        new BigNumber(amount),
-        contractAddress
-      );
+      await crossAddress.contractApprove(tokenAddress, amount, contractAddress);
     }
     try {
       const tx = await XVMSwap(
@@ -180,7 +176,7 @@ export default class CrossControl {
         contractAddress,
         account,
         selectMakerConfig,
-        toBigInt(amount),
+        amount,
         crossAddressReceipt ?? account,
         fromChainID,
         transferValue
