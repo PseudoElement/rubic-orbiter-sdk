@@ -75,13 +75,18 @@ describe("bridge tests", () => {
     expect(result.hash).toBeDefined;
   });
 
-  test.only("evm erc20 cross to op test", async () => {
+  test.only("evm erc20 cross test", async () => {
+    const opRpcs = await chainsService.getChainInfoAsync(420);
+    const opProvider = new ethers.JsonRpcProvider(opRpcs?.rpc?.[0]);
+    provider = opProvider;
+    const opSigner = signer.connect(provider);
+    bridge.updateSigner(opSigner);
     const evmCrossConfig = {
-      fromChainID: "5",
-      fromCurrency: "ETH",
-      toChainID: "420",
+      fromChainID: "420",
+      fromCurrency: "USDC",
+      toChainID: "5",
       toCurrency: "USDC",
-      transferValue: 0.001,
+      transferValue: 1,
     };
     let result = null;
     try {

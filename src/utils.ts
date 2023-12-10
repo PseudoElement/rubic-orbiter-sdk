@@ -100,18 +100,20 @@ export async function requestWeb3(
   });
 }
 
-export function getContract(
-  contractAddress: string,
-  localChainID?: number | string,
-  ABI?: any[]
-) {
+export function getContract(params: {
+  contractAddress: string;
+  localChainID?: number | string;
+  ABI?: any[];
+  signer?: Signer;
+}) {
+  const { localChainID, ABI, signer, contractAddress } = params;
   if (localChainID === 3 || localChainID === 33) {
     return;
   }
   if (localChainID === 4 || localChainID === 44) {
     return;
   }
-  return new ethers.Contract(contractAddress, ABI ? ABI : Coin_ABI);
+  return new ethers.Contract(contractAddress, ABI ? ABI : Coin_ABI, signer);
 }
 
 export function isEthTokenAddress(tokenAddress: string, chainInfo: IChainInfo) {
@@ -151,11 +153,13 @@ export async function getTransferGasLimit(
       });
       return gasLimit;
     } else {
-      const ecourseContractInstance = getContract(tokenAddress);
+      const ecourseContractInstance = getContract({
+        contractAddress: tokenAddress,
+        signer,
+      });
       if (!ecourseContractInstance) {
         return gasLimit;
       }
-
       gasLimit = await ecourseContractInstance.estimateGas({
         to,
         value,

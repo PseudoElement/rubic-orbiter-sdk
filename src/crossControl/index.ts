@@ -202,15 +202,11 @@ export default class CrossControl {
       tValue,
       isETH,
     } = this.crossConfig;
-
-    let gasLimit = await getTransferGasLimit(
-      this.signer,
-      selectMakerConfig,
-      account,
-      selectMakerConfig?.recipient,
-      fromChainInfo,
-      tValue?.tAmount
-    );
+    let gasLimit = await this.signer.estimateGas({
+      from: account,
+      to: selectMakerConfig?.recipient,
+      value: tValue?.tAmount,
+    });
     if (Number(fromChainID) === 2 && gasLimit < 21000) {
       gasLimit = 21000n;
     }
@@ -223,21 +219,26 @@ export default class CrossControl {
       });
       return tx;
     } else {
-      const transferContract = getContract(tokenAddress, fromChainID);
+      const transferContract = getContract({
+        contractAddress: tokenAddress,
+        localChainID: fromChainID,
+        signer: this.signer,
+      });
       if (!transferContract) {
         return throwNewError(
           "Failed to obtain contract information, please refresh and try again."
         );
       }
-      const objOption = { from: account, gas: gasLimit };
       try {
-        const transferResult = await transferContract.transfer(
-          to,
-          tValue?.tAmount
-        );
-        await transferResult.wait();
-        return await transferContract.send(objOption);
+        gasLimit =
+          String(fromChainID) === "42161" && gasLimit < 21000
+            ? 21000
+            : await transferContract.transfer.estimateGas(to, tValue?.tAmount);
+        return await transferContract.transfer(to, tValue?.tAmount, {
+          gasLimit,
+        });
       } catch (error) {
+        console.log(error);
         return throwNewError("evm transfer error", error);
       }
     }
