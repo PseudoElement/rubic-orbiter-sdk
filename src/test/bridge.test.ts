@@ -183,12 +183,9 @@ describe("bridge tests", () => {
       fromCurrency: "ETH",
       toChainID: "SN_GOERLI",
       toCurrency: "ETH",
+      crossAddressReceipt:
+        "0x04CC0189A24723B68aEeFf84EEf2c0286a1F03b7AECD14403E130Db011571f37",
       transferValue: 0.001,
-      transferExt: {
-        contractType: "0x03",
-        receiveStarknetAddress:
-          "0x04CC0189A24723B68aEeFf84EEf2c0286a1F03b7AECD14403E130Db011571f37",
-      },
     };
     let result = null;
     try {

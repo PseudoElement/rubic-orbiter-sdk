@@ -2,19 +2,17 @@ import { Signer, toBigInt } from "ethers-6";
 import ethers from "ethers";
 import { submitSignedTransactionsBatch, utils, Wallet } from "zksync";
 import { CrossAddress } from "../crossAddress/crossAddress";
-import { XVMSwap } from "./xvm";
 import loopring from "./loopring";
 import {
   getTransferValue,
   getZkSyncProvider,
+  isExecuteOrbiterRouterV3,
   isExecuteXVMContract,
 } from "../bridge/utils";
 import {
   getContract,
-  getContractByType,
+  getContractAddressByType,
   getRealTransferValue,
-  getRpcList,
-  getTransferGasLimit,
   isEthTokenAddress,
   throwNewError,
 } from "../utils";
@@ -22,7 +20,8 @@ import { ICrossFunctionParams, TCrossConfig } from "../types";
 import {
   CHAIN_ID_MAINNET,
   CHAIN_ID_TESTNET,
-  CONTRACT_OLD_TYPE,
+  CONTRACT_TYPE_ROUTER_V3,
+  CONTRACT_TYPE_SOURCE,
 } from "../constant/common";
 import BigNumber from "bignumber.js";
 import { ERC20TokenType, ETHTokenType } from "@imtbl/imx-sdk";
@@ -33,6 +32,7 @@ import {
   starknetHashFormat,
 } from "./starknet_helper";
 import { Account } from "starknet";
+import { OrbiterRouterType, orbiterRouterTransfer } from "./orbiterRouter";
 
 export default class CrossControl {
   private static instance: CrossControl;
@@ -108,17 +108,20 @@ export default class CrossControl {
       fromCurrency,
       toCurrency,
       crossAddressReceipt,
+      selectMakerConfig,
     } = this.crossConfig;
     if (
-      isExecuteXVMContract({
+      isExecuteOrbiterRouterV3({
         fromChainID,
         fromChainInfo,
         toChainID,
         fromCurrency,
         toCurrency,
         crossAddressReceipt,
+        selectMakerConfig,
       })
     ) {
+      console.log(111);
       return await this.xvmTransfer();
     }
     switch (fromChainID) {
@@ -159,8 +162,14 @@ export default class CrossControl {
     } = this.crossConfig;
 
     const amount = getRealTransferValue(selectMakerConfig, transferValue);
-    const contractAddress = fromChainInfo?.xvmList?.[0];
+    const contractAddress =
+      fromChainInfo.contract &&
+      getContractAddressByType(fromChainInfo.contract, CONTRACT_TYPE_ROUTER_V3);
     const tokenAddress = selectMakerConfig.fromChain.tokenAddress;
+    if (!contractAddress || !tokenAddress)
+      return throwNewError(
+        "xvmTransfer error [contractAddress or tokenAddress] is empty."
+      );
     if (!isETH) {
       const crossAddress = new CrossAddress(
         this.signer.provider,
@@ -171,17 +180,19 @@ export default class CrossControl {
       await crossAddress.contractApprove(tokenAddress, amount, contractAddress);
     }
     try {
-      const tx = await XVMSwap(
-        this.signer,
-        contractAddress,
-        account,
+      const type =
+        selectMakerConfig.fromChain.symbol === selectMakerConfig.toChain.symbol
+          ? OrbiterRouterType.CrossAddress
+          : OrbiterRouterType.CrossAddressCurrency;
+      return await orbiterRouterTransfer({
+        signer: this.signer,
+        type,
+        value: amount,
+        transferValue,
+        fromChainInfo,
+        toWalletAddress: crossAddressReceipt ?? account,
         selectMakerConfig,
-        amount,
-        crossAddressReceipt ?? account,
-        fromChainID,
-        transferValue
-      );
-      return tx;
+      });
     } catch (error) {
       return throwNewError("XVM transfer error", error);
     }
@@ -365,7 +376,7 @@ export default class CrossControl {
         amount,
         memo
       );
-    } catch (error) {
+    } catch (error: any) {
       const errorEnum = {
         "account is not activated":
           "This Loopring account is not yet activated, please activate it before transferring.",
@@ -417,55 +428,41 @@ export default class CrossControl {
     const {
       selectMakerConfig,
       fromChainID,
-      transferExt,
       tValue,
+      crossAddressReceipt,
       fromChainInfo,
       isETH,
+      account,
+      transferValue,
     } = this.crossConfig;
-
-    const contractAddress = selectMakerConfig.fromChain.tokenAddress;
-    const recipient = selectMakerConfig.recipient;
-    const amount = tValue.tAmount;
     if (
-      !transferExt?.receiveStarknetAddress ||
-      starknetHashFormat(transferExt.receiveStarknetAddress).length !== 66 ||
-      starknetHashFormat(transferExt.receiveStarknetAddress) ===
+      !crossAddressReceipt ||
+      starknetHashFormat(crossAddressReceipt).length !== 66 ||
+      starknetHashFormat(crossAddressReceipt) ===
         "0x0000000000000000000000000000000000000000000000000000000000000000"
     ) {
-      return throwNewError("please connect correct starknet wallet address");
+      return throwNewError("please use correct starknet address");
     }
-    const error = getAccountAddressError(
-      transferExt.receiveStarknetAddress,
-      true
-    );
+    const error = getAccountAddressError(crossAddressReceipt, "starknet");
     if (error) {
       return throwNewError(`starknet get account address error: ${error}`);
     }
     const contractByType =
       fromChainInfo.contract &&
-      getContractByType(fromChainInfo.contract, CONTRACT_OLD_TYPE);
+      getContractAddressByType(fromChainInfo.contract, CONTRACT_TYPE_SOURCE);
     if (!fromChainInfo.contract || !contractByType) {
       return throwNewError("Contract not in fromChainInfo.");
     }
-    const crossContractAddress = contractByType;
     try {
-      const provider = this.signer.provider;
-      const crossAddress = new CrossAddress(
-        provider,
-        fromChainID,
-        this.signer,
-        crossContractAddress
-      );
-      if (isETH) {
-        return await crossAddress.transfer(recipient, amount, transferExt);
-      } else {
-        return await crossAddress.transferERC20(
-          contractAddress,
-          recipient,
-          new BigNumber(amount),
-          transferExt
-        );
-      }
+      return await orbiterRouterTransfer({
+        signer: this.signer,
+        type: OrbiterRouterType.CrossAddress,
+        value: tValue.tAmount,
+        transferValue,
+        fromChainInfo,
+        toWalletAddress: crossAddressReceipt,
+        selectMakerConfig,
+      });
     } catch (err) {
       return throwNewError("transfer to starknet error", err);
     }

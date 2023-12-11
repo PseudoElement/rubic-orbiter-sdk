@@ -7,12 +7,12 @@ import {
   toBigInt,
 } from "ethers-6";
 import { Coin_ABI, CROSS_ADDRESS_ABI } from "../constant/abi";
-import { hexConcat, hexDataSlice, sleep } from "./util";
+import { hexConcat, hexDataSlice } from "./util";
 import { padStart } from "lodash";
 import ChainsService from "../services/ChainsService";
 import BigNumber from "bignumber.js";
 import { ITransferExt } from "../types";
-import { throwNewError } from "../utils";
+import { approveAndAllowanceCheck, sleep, throwNewError } from "../utils";
 
 export const CrossAddressTypes = {
   "0x01": "Cross Ethereum Address",
@@ -84,6 +84,12 @@ export class CrossAddress {
   ) {
     await this.checkNetworkId();
     const contract = new ethers.Contract(tokenAddress, Coin_ABI, this.signer);
+    await approveAndAllowanceCheck({
+      contractInstance: contract,
+      account: await this.signer.getAddress(),
+      contractAddress: tokenAddress,
+      targetValue: amount,
+    });
     const currentAllowance: BigInt = await this.getAllowance(
       contract,
       contractAddress
@@ -100,8 +106,8 @@ export class CrossAddress {
         }
         await sleep(2000);
       }
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      throwNewError(error.message);
     }
   }
 
@@ -142,7 +148,7 @@ export class CrossAddress {
   async transferERC20(
     tokenAddress: string,
     to: string,
-    amount: BigNumber,
+    amount: BigInt,
     ext?: ITransferExt
   ): Promise<{ hash: string }> {
     await this.checkNetworkId();
@@ -161,7 +167,7 @@ export class CrossAddress {
     );
 
     const allowance = await this.getAllowance(contractErc20);
-    if (amount.gt(allowance)) {
+    if (amount > allowance) {
       await this.approveERC20(tokenAddress, amount);
     }
 
@@ -179,7 +185,8 @@ export class CrossAddress {
     amount: BigInt,
     contractAddress?: string
   ) {
-    if (!contractAddress) throw new Error("contract approve address is empty!");
+    if (!contractAddress)
+      return throwNewError("contract approve address is empty!");
     const contractErc20 = new ethers.Contract(
       tokenAddress,
       Coin_ABI,

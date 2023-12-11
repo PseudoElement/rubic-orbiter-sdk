@@ -155,5 +155,5 @@ export const GAS_ADDRESS = {
   },
 };
 
-export const CONTRACT_OLD_TYPE = "OBSource";
-export const CONTRACT_NEW_TYPE = "OrbiterRouterV3";
+export const CONTRACT_TYPE_SOURCE = "OBSource";
+export const CONTRACT_TYPE_ROUTER_V3 = "OrbiterRouterV3";

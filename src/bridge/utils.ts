@@ -12,6 +12,62 @@ import Axios from "axios";
 import * as zksync from "zksync";
 import { queryRatesByCurrency } from "../services/ApiService";
 
+export const isExecuteOrbiterRouterV3 = (data: {
+  fromCurrency: string;
+  toCurrency: string;
+  selectMakerConfig: ICrossRule;
+  fromChainID: string;
+  fromChainInfo: IChainInfo;
+  toChainID: string;
+  crossAddressReceipt?: string;
+}) => {
+  const {
+    fromCurrency,
+    toCurrency,
+    fromChainID,
+    crossAddressReceipt,
+    selectMakerConfig,
+    fromChainInfo,
+    toChainID,
+  } = data;
+  return !!(
+    isSupportOrbiterRouterV3({
+      fromChainID,
+      selectMakerConfig,
+      fromChainInfo,
+      toChainID,
+    }) &&
+    (fromCurrency !== toCurrency || !!crossAddressReceipt)
+  );
+};
+
+export const isSupportOrbiterRouterV3 = (data: {
+  fromChainID: string;
+  selectMakerConfig: ICrossRule;
+  fromChainInfo: IChainInfo;
+  toChainID: string;
+}) => {
+  const { selectMakerConfig, fromChainID, fromChainInfo, toChainID } = data;
+  if (isStarkNet(fromChainID, toChainID)) {
+    return false;
+  }
+  if (selectMakerConfig.ebcId) {
+    return false;
+  }
+  return !!Object.values(fromChainInfo?.contract || {}).find(
+    (item) => item === "OrbiterRouterV3"
+  );
+};
+
+export const isStarkNet = (fromChainID: string, toChainID: string) => {
+  return (
+    fromChainID === CHAIN_ID_MAINNET.starknet ||
+    fromChainID === CHAIN_ID_TESTNET.starknet_test ||
+    toChainID === CHAIN_ID_MAINNET.starknet ||
+    toChainID === CHAIN_ID_TESTNET.starknet_test
+  );
+};
+
 export const isExecuteXVMContract = (sendInfo: {
   fromChainID: number | string;
   fromChainInfo: IChainInfo;
@@ -117,10 +173,11 @@ function getTAmountFromRAmount(
     throw new Error("Amount size must be greater than pNumberSize");
   }
   if (isLimitNumber(chain) && amountLength > validDigit) {
-    let tAmount =
+    let tAmount = BigInt(
       amount.toString().slice(0, validDigit - pText.length) +
-      pText +
-      amount.toString().slice(validDigit);
+        pText +
+        amount.toString().slice(validDigit)
+    );
     return {
       state: true,
       tAmount,
@@ -128,11 +185,12 @@ function getTAmountFromRAmount(
   } else if (isLPChain(chain)) {
     return {
       state: true,
-      tAmount: amount,
+      tAmount: BigInt(amount),
     };
   } else {
-    let tAmount =
-      amount.toString().slice(0, amountLength - pText.length) + pText;
+    let tAmount = BigInt(
+      amount.toString().slice(0, amountLength - pText.length) + pText
+    );
     return {
       state: true,
       tAmount,

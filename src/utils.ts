@@ -6,12 +6,42 @@ import {
   PerformActionRequest,
   Provider,
   Signer,
+  Contract,
   ethers,
 } from "ethers-6";
 import { Coin_ABI } from "./constant/common";
 import { IChainInfo, ICrossRule } from "./types";
 import BigNumber from "bignumber.js";
 import { queryRatesByCurrency } from "./services/ApiService";
+
+export const approveAndAllowanceCheck = async (params: {
+  contractInstance: Contract;
+  account: string;
+  contractAddress: string;
+  targetValue: BigInt;
+}): Promise<void> => {
+  const { contractInstance, account, contractAddress, targetValue } = params;
+  const allowance: BigInt = await contractInstance.allowance(
+    account,
+    contractAddress
+  );
+  if (targetValue > allowance) {
+    await contractInstance.approve(contractAddress, targetValue);
+    for (let index = 0; index < 5000; index++) {
+      const newAllowance: BigInt = await contractInstance.allowance(
+        account,
+        contractAddress
+      );
+      if (allowance !== newAllowance) {
+        if (targetValue > newAllowance) {
+          throwNewError(`Approval amount is insufficient`);
+        }
+        break;
+      }
+      await sleep(2000);
+    }
+  }
+};
 
 export function equalsIgnoreCase(value1: string, value2: string): boolean {
   if (typeof value1 !== "string" || typeof value2 !== "string") {
@@ -269,7 +299,7 @@ export const throwNewError = (message: string, error?: any) => {
   throw new Error(throwMessage);
 };
 
-export const getContractByType = (
+export const getContractAddressByType = (
   targetChainContracts: { [k: string]: string },
   value: string
 ) => {

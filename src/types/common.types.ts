@@ -143,6 +143,6 @@ export type TCrossConfig = ICrossFunctionParams & {
   to: string;
   tValue: {
     state: boolean;
-    tAmount: string;
+    tAmount: BigInt;
   };
 };

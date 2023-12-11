@@ -9,13 +9,6 @@ import {
 import { requestWeb3, throwNewError } from "../utils";
 import { IChainInfo } from "../types";
 
-export function sleep(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(null);
-    }, ms);
-  });
-}
 export function hexConcat(items: ReadonlyArray<BytesLike>): string {
   let result = "0x";
   items.forEach((item) => {

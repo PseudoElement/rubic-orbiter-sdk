@@ -6,8 +6,8 @@ import {
   validateAndParseAddress,
 } from "starknet";
 import { STARKNET_ERC20_ABI, STARKNET_OB_SOURCE_ABI } from "../constant/abi";
-import { CONTRACT_OLD_TYPE, UINT_256_MAX } from "../constant/common";
-import { getContractByType, throwNewError } from "../utils";
+import { CONTRACT_TYPE_SOURCE, UINT_256_MAX } from "../constant/common";
+import { getContractAddressByType, throwNewError } from "../utils";
 import { IChainInfo } from "../types";
 import BigNumber from "bignumber.js";
 
@@ -24,7 +24,7 @@ export async function sendTransfer(
   makerAddress = makerAddress.toLowerCase();
   const contractAddress =
     fromChainInfo.contract &&
-    getContractByType(fromChainInfo.contract, CONTRACT_OLD_TYPE);
+    getContractAddressByType(fromChainInfo.contract, CONTRACT_TYPE_SOURCE);
 
   if (!fromChainInfo.contract || !contractAddress) {
     return throwNewError("Contract not in fromChainInfo.");
@@ -46,7 +46,6 @@ export async function sendTransfer(
     contractAddress,
     account
   );
-
   const receiverAddress = makerAddress;
   try {
     let tx;
@@ -105,8 +104,11 @@ export function starknetHashFormat(txHash: string) {
   return txHash;
 }
 
-export function getAccountAddressError(address: string, isStarknet: boolean) {
-  if (isStarknet) {
+export function getAccountAddressError(
+  address: string,
+  type: "starknet" | "evm"
+) {
+  if (type === "starknet") {
     try {
       validateAndParseAddress(starknetHashFormat(address));
       return null;
