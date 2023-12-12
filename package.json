@@ -23,13 +23,13 @@
   "author": "Alan <alanseveryzoer@gmail.com>",
   "license": "ISC",
   "dependencies": {
+    "@dydxprotocol/v3-client": "^1.8.2",
+    "@imtbl/imx-sdk": "^1.5.0",
     "@loopring-web/loopring-sdk": "3.5.12",
     "axios": "^1.6.2",
     "bignumber.js": "^9.1.2",
     "ethers-6": "npm:ethers@^6.8.1",
     "starknet": "5.19.5",
-    "@dydxprotocol/v3-client": "^1.8.2",
-    "@imtbl/imx-sdk": "^1.5.0",
     "web3": "^1.7.4",
     "zksync": "^0.11.3"
   },
@@ -37,6 +37,7 @@
     "@types/lodash": "^4.14.202",
     "@types/web3": "^1.2.2",
     "cross-env": "^7.0.3",
+    "dotenv": "^16.3.1",
     "lodash": "^4.17.21",
     "typescript": "^5.2.2",
     "vitest": "^0.34.6",

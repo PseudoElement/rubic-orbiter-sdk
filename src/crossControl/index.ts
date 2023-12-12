@@ -1,4 +1,4 @@
-import { Signer, toBigInt } from "ethers-6";
+import { Signer } from "ethers-6";
 import ethers from "ethers";
 import { submitSignedTransactionsBatch, utils, Wallet } from "zksync";
 import { CrossAddress } from "../crossAddress/crossAddress";
@@ -7,8 +7,7 @@ import {
   getTransferValue,
   getZkSyncProvider,
   isExecuteOrbiterRouterV3,
-  isExecuteXVMContract,
-} from "../bridge/utils";
+} from "../orbiter/utils";
 import {
   getContract,
   getContractAddressByType,
@@ -121,7 +120,6 @@ export default class CrossControl {
         selectMakerConfig,
       })
     ) {
-      console.log(111);
       return await this.xvmTransfer();
     }
     switch (fromChainID) {

@@ -36,20 +36,6 @@ export default class ChainsService {
     return this.instance;
   }
 
-  public getChainInfo(chain: number | string): IChainInfo {
-    const currentChain = chain.toString();
-    const chainInfo = this.chains.find(
-      (chainItem) =>
-        chainItem.chainId === currentChain ||
-        chainItem.internalId === currentChain
-    );
-    if (!chainInfo) {
-      throw new Error(`getChainInfo: Unknown chain passed: ${currentChain}.`);
-    }
-
-    return chainInfo;
-  }
-
   public async getChainInfoAsync(chain: number | string): Promise<IChainInfo> {
     await this.checkLoading();
 
@@ -67,10 +53,6 @@ export default class ChainsService {
     }
 
     return chainInfo;
-  }
-
-  public getChains(): IChainInfo[] {
-    return this.chains;
   }
 
   public async getChainsAsync(): Promise<IChainInfo[]> {

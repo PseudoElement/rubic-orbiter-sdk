@@ -57,6 +57,46 @@ export interface IChainInfo {
   infoURL?: string;
 }
 
+export interface ITransactionInfo {
+  fromChainId: string;
+  fromHash: string;
+  fromSymbol: string;
+  fromTimestamp: string;
+  fromValue: string;
+  status: number;
+  toChainId: string;
+  toHash: string;
+  toTimestamp: Date;
+  toValue: string;
+}
+
+export interface ITxList {
+  chainId: string;
+  hash: string;
+  side: number;
+  status: number;
+  symbol: string;
+  timestamp: string;
+  value: string;
+}
+
+export interface ISearchTxData {
+  fromHash: string;
+  fromChainId: string;
+  fromTime: string;
+  fromAmount: string;
+  fromSymbol: string;
+  fromTimeStampShow: string;
+  fromAmountValue: string;
+  toHash: string;
+  toChainId: string;
+  toTime: string;
+  toAmount: string;
+  toSymbol: string;
+  toTimeStampShow: string;
+  toAmountValue: string;
+}
+
 export interface IQueryChainInfosData {
   data: IChainInfo[];
 }

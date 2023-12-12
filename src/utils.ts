@@ -315,3 +315,38 @@ export const getContractAddressByType = (
   }
   return targetContract;
 };
+
+export const getChainTokenList = (chainInfo: IChainInfo) => {
+  const allTokenList = [];
+  if (!chainInfo) return [];
+  if (chainInfo.tokens && chainInfo.tokens.length) {
+    allTokenList.push(...chainInfo.tokens);
+  }
+  if (chainInfo.nativeCurrency) {
+    allTokenList.push(chainInfo.nativeCurrency);
+  }
+  return allTokenList;
+};
+
+export const formatDate = (date: Date | string, isShort?: boolean): string => {
+  date = new Date(date);
+  const year = date.getFullYear();
+  const mon =
+    date.getMonth() + 1 < 10
+      ? "0" + (date.getMonth() + 1)
+      : date.getMonth() + 1;
+  const data = date.getDate() < 10 ? "0" + date.getDate() : date.getDate();
+  const hour = date.getHours() < 10 ? "0" + date.getHours() : date.getHours();
+  const min =
+    date.getMinutes() < 10 ? "0" + date.getMinutes() : date.getMinutes();
+  const seon =
+    date.getSeconds() < 10 ? "0" + date.getSeconds() : date.getSeconds();
+
+  if (isShort) return mon + "-" + data + " " + hour + ":" + min;
+  const toYear = new Date().getFullYear();
+  if (toYear === year) {
+    return mon + "-" + data + " " + hour + ":" + min + ":" + seon;
+  } else {
+    return year + "-" + mon + "-" + data + " " + hour + ":" + min;
+  }
+};

@@ -8,7 +8,7 @@ import {
   getContractAddressByType,
   approveAndAllowanceCheck,
 } from "../utils";
-import { getExpectValue } from "../bridge/utils";
+import { getExpectValue } from "../orbiter/utils";
 import { IChainInfo, ICrossRule } from "../types";
 import { CONTRACT_TYPE_ROUTER_V3 } from "../constant/common";
 

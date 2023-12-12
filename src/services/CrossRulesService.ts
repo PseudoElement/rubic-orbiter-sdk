@@ -36,10 +36,6 @@ export default class CrossRulesService {
     return this.instance;
   }
 
-  public getRules(): ICrossRule[] {
-    return this.crossRules;
-  }
-
   public async getRulesAsync(): Promise<ICrossRule[]> {
     await this.checkLoading();
 

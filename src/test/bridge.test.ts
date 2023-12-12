@@ -1,38 +1,34 @@
+require("dotenv").config("./.env");
 import { Provider, Signer, Wallet, ethers } from "ethers-6";
 import { beforeAll, describe, expect, test } from "vitest";
-import ChainsService from "../services/ChainsService";
-import OBridge from "../bridge";
+import Orbiter from "../orbiter";
 import { Account, RpcProvider as snProvider } from "starknet";
 
-describe("bridge tests", () => {
+describe("orbiter tests", () => {
   // add your private key to the environment to be able to run the tests
-  const PRIVATE_KEY = "";
-  const STARKNET_PRIVATE_KEY = "";
-  const STARKNET_ADDRESS =
-    "0x04CC0189A24723B68aEeFf84EEf2c0286a1F03b7AECD14403E130Db011571f37";
+  const PRIVATE_KEY = process.env.PRIVATE_KEY;
+  const STARKNET_PRIVATE_KEY = process.env.STARKNET_PRIVATE_KEY;
+  const STARKNET_ADDRESS = process.env.STARKNET_ADDRESS;
 
   let signer: Signer;
-  let bridge: OBridge;
+  let orbiter: Orbiter;
   let provider: Provider;
   let owner: string;
-  let chainsService: ChainsService;
 
   beforeAll(async () => {
     if (!PRIVATE_KEY)
       throw new Error(
         "private key can not be empty, pls add your private to the environment to be able to run the tests"
       );
-    chainsService = new ChainsService();
-    // const goerliRpcs = await chainsService.getChainInfoAsync(5);
+    orbiter = new Orbiter();
+    // const goerliRpcs = await orbiter.getChainInfoAsync(5);
     const goerliProvider = new ethers.JsonRpcProvider(
       "https://goerli.infura.io/v3/e41edd236d664caabcc0b486e4912069"
     );
     // const goerliProvider = new ethers.JsonRpcProvider(goerliRpcs?.rpc?.[0]);
     provider = goerliProvider;
     signer = new Wallet(PRIVATE_KEY, goerliProvider);
-    bridge = new OBridge({
-      signer,
-    });
+    orbiter.updateSigner(signer);
     owner = await signer.getAddress();
   });
 
@@ -49,7 +45,7 @@ describe("bridge tests", () => {
     };
     let result = null;
     try {
-      result = await bridge.toBridge(xvmCrossConfig);
+      result = await orbiter.toBridge(xvmCrossConfig);
     } catch (error: any) {
       console.log(error.message);
     }
@@ -69,7 +65,7 @@ describe("bridge tests", () => {
     };
     let result = null;
     try {
-      result = await bridge.toBridge(xvmCrossConfig);
+      result = await orbiter.toBridge(xvmCrossConfig);
     } catch (error: any) {
       console.log(error.message);
     }
@@ -87,7 +83,7 @@ describe("bridge tests", () => {
     };
     let result = null;
     try {
-      result = await bridge.toBridge(evmCrossConfig);
+      result = await orbiter.toBridge(evmCrossConfig);
     } catch (error: any) {
       console.log(error.message);
     }
@@ -96,11 +92,11 @@ describe("bridge tests", () => {
   });
 
   test("evm erc20 cross test", async () => {
-    const opRpcs = await chainsService.getChainInfoAsync(420);
+    const opRpcs = await orbiter.getChainInfoAsync(420);
     const opProvider = new ethers.JsonRpcProvider(opRpcs?.rpc?.[0]);
     provider = opProvider;
     const opSigner = signer.connect(provider);
-    bridge.updateSigner(opSigner);
+    orbiter.updateSigner(opSigner);
     const evmCrossConfig = {
       fromChainID: "420",
       fromCurrency: "USDC",
@@ -110,7 +106,7 @@ describe("bridge tests", () => {
     };
     let result = null;
     try {
-      result = await bridge.toBridge(evmCrossConfig);
+      result = await orbiter.toBridge(evmCrossConfig);
     } catch (error: any) {
       console.log(error.message);
     }
@@ -128,7 +124,7 @@ describe("bridge tests", () => {
     };
     let result = null;
     try {
-      result = await bridge.toBridge(zksyncCrossConfig);
+      result = await orbiter.toBridge(zksyncCrossConfig);
     } catch (error: any) {
       console.log(error.message);
     }
@@ -144,20 +140,20 @@ describe("bridge tests", () => {
   //     toCurrency: "ETH",
   //     transferValue: 0.001,
   //   };
-  //   const tx = await bridge.toBridge(loopringCrossConfig);
+  //   const tx = await orbiter.toBridge(loopringCrossConfig);
   //   console.log(tx.txHash);
   //   expect(tx.txHash).toBeDefined;
   // });
 
   // test("starknet ETH cross to goerli test", async () => {
-  //   const starknetInfo = await chainsService.getChainInfoAsync("SN_GOERLI");
+  //   const starknetInfo = await orbiter.getChainInfoAsync("SN_GOERLI");
   //   const provider = new snProvider({ nodeUrl: starknetInfo?.rpc?.[0] || "" });
   //   const account = new Account(
   //     provider,
   //     STARKNET_ADDRESS,
   //     STARKNET_PRIVATE_KEY
   //   );
-  //   bridge.updateSigner(account);
+  //   orbiter.updateSigner(account);
 
   //   let result = null;
   //   try {
@@ -169,7 +165,7 @@ describe("bridge tests", () => {
   //       transferValue: 0.001,
   //       crossAddressReceipt: "0x15962f38e6998875F9F75acDF8c6Ddc743F11041",
   //     };
-  //     result = await bridge.toBridge(starknetCrossConfig);
+  //     result = await orbiter.toBridge(starknetCrossConfig);
   //   } catch (error: any) {
   //     console.log(error.message);
   //   }
@@ -189,7 +185,7 @@ describe("bridge tests", () => {
     };
     let result = null;
     try {
-      result = await bridge.toBridge(starknetCrossConfig);
+      result = await orbiter.toBridge(starknetCrossConfig);
     } catch (error: any) {
       console.log(error.message);
     }
@@ -207,7 +203,7 @@ describe("bridge tests", () => {
         toCurrency: "ETH",
         transferValue: 0.001,
       };
-      result = await bridge.toBridge(imxCrossConfig);
+      result = await orbiter.toBridge(imxCrossConfig);
     } catch (error: any) {
       console.log(error.message);
     }

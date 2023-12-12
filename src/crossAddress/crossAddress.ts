@@ -10,7 +10,6 @@ import { Coin_ABI, CROSS_ADDRESS_ABI } from "../constant/abi";
 import { hexConcat, hexDataSlice } from "./util";
 import { padStart } from "lodash";
 import ChainsService from "../services/ChainsService";
-import BigNumber from "bignumber.js";
 import { ITransferExt } from "../types";
 import { approveAndAllowanceCheck, sleep, throwNewError } from "../utils";
 
