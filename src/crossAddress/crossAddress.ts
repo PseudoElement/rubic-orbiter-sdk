@@ -9,8 +9,7 @@ import {
 import { Coin_ABI, CROSS_ADDRESS_ABI } from "../constant/abi";
 import { hexConcat, hexDataSlice } from "./util";
 import { padStart } from "lodash";
-import ChainsService from "../services/ChainsService";
-import { ITransferExt } from "../types";
+import { IChainInfo, ITransferExt } from "../types";
 import { approveAndAllowanceCheck, sleep, throwNewError } from "../utils";
 
 export const CrossAddressTypes = {
@@ -20,26 +19,21 @@ export const CrossAddressTypes = {
 };
 
 export class CrossAddress {
-  private chainsService: ChainsService;
   private contractAddress: string;
-  private orbiterChainId: number;
   private provider: Provider | null;
   private signer: Signer;
   private networkId: string | number;
   private providerNetworkId?: bigint | null;
 
   constructor(
-    provider: Provider | null,
-    orbiterChainId: string | number,
     signer: Signer,
+    fromChainInfo: IChainInfo,
     contractAddress?: string
   ) {
-    this.chainsService = ChainsService.getInstance();
-    const chainInfo = this.chainsService.getChainInfo(Number(orbiterChainId));
     this.contractAddress =
       contractAddress ||
-      (chainInfo?.xvmList && chainInfo.xvmList.length
-        ? chainInfo.xvmList[0]
+      (fromChainInfo?.xvmList && fromChainInfo.xvmList.length
+        ? fromChainInfo.xvmList[0]
         : "");
     if (!this.contractAddress) {
       throwNewError(
@@ -47,10 +41,9 @@ export class CrossAddress {
       );
     }
 
-    this.provider = provider;
-    this.orbiterChainId = Number(orbiterChainId);
+    this.provider = signer.provider;
     this.signer = signer;
-    this.networkId = chainInfo.networkId;
+    this.networkId = fromChainInfo.networkId;
   }
 
   async checkNetworkId() {

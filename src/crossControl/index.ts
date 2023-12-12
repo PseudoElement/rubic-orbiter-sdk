@@ -170,9 +170,8 @@ export default class CrossControl {
       );
     if (!isETH) {
       const crossAddress = new CrossAddress(
-        this.signer.provider,
-        fromChainID,
         this.signer,
+        fromChainInfo,
         contractAddress
       );
       await crossAddress.contractApprove(tokenAddress, amount, contractAddress);

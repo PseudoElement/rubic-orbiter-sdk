@@ -36,7 +36,8 @@ export default class HistoryService {
       "address" in this.signer
         ? this.signer?.address
         : await this.signer?.getAddress();
-    if (!account) return throwNewError("queryHistoryList has no signer.");
+    if (!account)
+      return throwNewError("queryHistoryList has no signer / account.");
     const { pageNum, pageSize } = params;
     return await queryTransactionByAddress(account, pageNum, pageSize);
   }
