@@ -6,9 +6,9 @@ import { Account, RpcProvider as snProvider } from "starknet";
 
 describe("orbiter tests", () => {
   // add your private key to the environment to be able to run the tests
-  const PRIVATE_KEY = process.env.PRIVATE_KEY;
-  const STARKNET_PRIVATE_KEY = process.env.STARKNET_PRIVATE_KEY;
-  const STARKNET_ADDRESS = process.env.STARKNET_ADDRESS;
+  const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
+  const STARKNET_PRIVATE_KEY = process.env.STARKNET_PRIVATE_KEY || "";
+  const STARKNET_ADDRESS = process.env.STARKNET_ADDRESS || "";
 
   let signer: Signer;
   let orbiter: Orbiter;
@@ -80,29 +80,6 @@ describe("orbiter tests", () => {
       toChainID: "420",
       toCurrency: "ETH",
       transferValue: 0.001,
-    };
-    let result = null;
-    try {
-      result = await orbiter.toBridge(evmCrossConfig);
-    } catch (error: any) {
-      console.log(error.message);
-    }
-    console.log(result.hash);
-    expect(result.hash).toBeDefined;
-  });
-
-  test("evm erc20 cross test", async () => {
-    const opRpcs = await orbiter.getChainInfoAsync(420);
-    const opProvider = new ethers.JsonRpcProvider(opRpcs?.rpc?.[0]);
-    provider = opProvider;
-    const opSigner = signer.connect(provider);
-    orbiter.updateSigner(opSigner);
-    const evmCrossConfig = {
-      fromChainID: "420",
-      fromCurrency: "USDC",
-      toChainID: "5",
-      toCurrency: "USDC",
-      transferValue: 1,
     };
     let result = null;
     try {
@@ -209,5 +186,78 @@ describe("orbiter tests", () => {
     }
     console.log(result);
     expect(result).toBeDefined;
+  });
+
+  test("evm erc20 cross test", async () => {
+    const opRpcs = await orbiter.getChainInfoAsync(420);
+    const opProvider = new ethers.JsonRpcProvider(opRpcs?.rpc?.[0]);
+    provider = opProvider;
+    const opSigner = signer.connect(provider);
+    orbiter.updateSigner(opSigner);
+    const evmCrossConfig = {
+      fromChainID: "420",
+      fromCurrency: "USDC",
+      toChainID: "5",
+      toCurrency: "USDC",
+      transferValue: 1,
+    };
+    let result = null;
+    try {
+      result = await orbiter.toBridge(evmCrossConfig);
+    } catch (error: any) {
+      console.log(error.message);
+    }
+    console.log(result.hash);
+    expect(result.hash).toBeDefined;
+  });
+
+  test.only("evm signer is not match with the source chain test", async () => {
+    const opRpcs = await orbiter.getChainInfoAsync(420);
+    const opProvider = new ethers.JsonRpcProvider(opRpcs?.rpc?.[0]);
+    provider = opProvider;
+    const opSigner = signer.connect(provider);
+    orbiter.updateSigner(opSigner);
+    const evmCrossConfig = {
+      fromChainID: "5",
+      fromCurrency: "USDC",
+      toChainID: "420",
+      toCurrency: "USDC",
+      transferValue: 1,
+    };
+    let result = null;
+    try {
+      result = await orbiter.toBridge(evmCrossConfig);
+    } catch (error: any) {
+      console.log(error.message);
+      expect(error.message).eq(
+        "evm signer is not match with the source chain."
+      );
+    }
+  });
+
+  test.only("starknet account is not match with the source chain test", async () => {
+    const starknetInfo = await orbiter.getChainInfoAsync("SN_GOERLI");
+    const provider = new snProvider({ nodeUrl: starknetInfo?.rpc?.[0] || "" });
+    const account = new Account(
+      provider,
+      STARKNET_ADDRESS,
+      STARKNET_PRIVATE_KEY
+    );
+    orbiter.updateSigner(account);
+    const evmCrossConfig = {
+      fromChainID: "5",
+      fromCurrency: "USDC",
+      toChainID: "420",
+      toCurrency: "USDC",
+      transferValue: 1,
+    };
+    let result = null;
+    try {
+      result = await orbiter.toBridge(evmCrossConfig);
+    } catch (error: any) {
+      expect(error.message).eq(
+        "starknet account is not match with the source chain."
+      );
+    }
   });
 });

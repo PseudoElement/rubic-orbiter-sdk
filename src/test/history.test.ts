@@ -47,9 +47,8 @@ describe.only("bridge tests", () => {
     expect(result?.fromHash).is.string;
   });
 
-  test("searchTransaction is not found test", async () => {
-    const goerliToStarknetGoerliHash =
-      "0x3638d76871d33e31b4beb2b2b22279df7a8e683cc3eb7ac17278233323332333";
+  test.only("searchTransaction is not found test", async () => {
+    const goerliToStarknetGoerliHash = `0x${"3".repeat(64)}`;
     const result = await orbiter.searchTransaction(
       goerliToStarknetGoerliHash,
       5

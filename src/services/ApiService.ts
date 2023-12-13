@@ -1,4 +1,5 @@
-import Axios, { AxiosResponse } from "axios";
+import { AxiosResponse } from "axios";
+import Axios from "../request";
 import {
   QueryRatesData,
   Rates,

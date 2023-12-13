@@ -3,13 +3,26 @@ import CrossRulesService from "../services/CrossRulesService";
 import TokenService from "../services/TokenService";
 import HistoryService from "../services/HistoryService";
 import CrossControl from "../crossControl";
-import { IChainInfo, IOBridgeConfig, ITransferConfig } from "../types";
+import {
+  IChainInfo,
+  ICrossRule,
+  IOBridgeConfig,
+  ISearchTxData,
+  IToken,
+  ITokensByChain,
+  ITransactionInfo,
+  ITransferConfig,
+  TAddress,
+  TSymbol,
+  TTokenName,
+  starknetChainId,
+} from "../types";
 import { Signer } from "ethers-6";
 import { throwNewError } from "../utils";
 import { Account } from "starknet";
 
 export default class Orbiter {
-  private signer: Signer | Account | any;
+  private signer: Signer | Account;
 
   private chainsService: ChainsService;
   private tokensService: TokenService;
@@ -34,19 +47,36 @@ export default class Orbiter {
     this.historyService.updateSigner(signer);
   }
 
-  getChainsAsync = async () => {
+  getChainsAsync = async (): Promise<IChainInfo[]> => {
     return await this.chainsService.getChainsAsync();
   };
 
-  getChainInfoAsync = async (chainId: string | number) => {
+  getChainInfoAsync = async (chainId: string | number): Promise<IChainInfo> => {
     return await this.chainsService.getChainInfoAsync(chainId);
   };
 
-  public getTokensService() {
-    return this.tokensService;
-  }
+  getTokensDecimals = async (
+    chainId: string | number,
+    token:
+      | TTokenName
+      | TAddress
+      | TSymbol
+      | Array<TTokenName | TAddress | TSymbol>
+  ) => {
+    return await this.tokensService.getTokensDecimals(chainId, token);
+  };
 
-  getRulesAsync = async () => {
+  getAllChainTokensAsync = async (): Promise<ITokensByChain> => {
+    return await this.tokensService.getTokensByChainAsync();
+  };
+
+  getTokensByChainIdAsync = async (
+    chainId: string | number
+  ): Promise<IToken[] | []> => {
+    return await this.tokensService.getTokensByChainIdAsync(chainId);
+  };
+
+  getRulesAsync = async (): Promise<ICrossRule[]> => {
     return await this.crossRulesService.getRulesAsync();
   };
 
@@ -55,22 +85,28 @@ export default class Orbiter {
     toChainInfo: IChainInfo;
     fromCurrency: string;
     toCurrency: string;
-  }) => {
+  }): Promise<ICrossRule> => {
     return await this.crossRulesService.getRuleByPairId(params);
   };
 
   getHistoryListAsync = async (params: {
     pageNum: number;
     pageSize: number;
-  }) => {
+  }): Promise<{
+    transactions: ITransactionInfo[];
+    count: number;
+  }> => {
     return await this.historyService.queryHistoryList(params);
   };
 
-  searchTransaction = async (txHash: string, fromChainID: number | string) => {
-    return this.historyService.searchTransaction(txHash, fromChainID);
+  searchTransaction = async (
+    txHash: string,
+    fromChainID: number | string
+  ): Promise<ISearchTxData | undefined> => {
+    return await this.historyService.searchTransaction(txHash, fromChainID);
   };
 
-  public async toBridge(transferConfig: ITransferConfig) {
+  toBridge = async (transferConfig: ITransferConfig) => {
     if (!this.signer) throw new Error("Can not find signer, please check it!");
     const {
       fromChainID,
@@ -81,6 +117,19 @@ export default class Orbiter {
       transferExt,
     } = transferConfig;
     const fromChainInfo = await this.getChainInfoAsync(fromChainID);
+    let currentChainId: BigInt = 0n;
+    if ("getAddress" in this.signer) {
+      const currentNetwork = await this.signer.provider?.getNetwork();
+      currentChainId = currentNetwork?.chainId || 0n;
+      if (currentChainId !== BigInt(fromChainInfo.chainId)) {
+        return throwNewError("evm signer is not match with the source chain.");
+      }
+    } else {
+      if (!starknetChainId.includes(fromChainID))
+        return throwNewError(
+          "starknet account is not match with the source chain."
+        );
+    }
     const toChainInfo = await this.getChainInfoAsync(toChainID);
     if (!fromChainInfo || !toChainInfo)
       throw new Error("Cant get ChainInfo by fromChainId or to toChainId.");
@@ -110,5 +159,5 @@ export default class Orbiter {
     } catch (error) {
       throwNewError("Bridge getCrossFunction error", error);
     }
-  }
+  };
 }

@@ -1,4 +1,5 @@
-import { BigNumberish, Signer } from "ethers-6";
+import { Signer } from "ethers-6";
+import { HexString } from "ethers-6/lib.commonjs/utils/data";
 
 export interface IOBridgeConfig {
   signer: Signer;
@@ -16,11 +17,15 @@ export interface QueryRatesData {
   };
 }
 
+export type TTokenName = string;
+export type TSymbol = string;
+export type TAddress = string | HexString;
+
 export interface IToken {
-  name: string;
-  symbol: string;
+  name: TTokenName;
+  symbol: TSymbol;
   decimals: number;
-  address: string;
+  address: TAddress;
   id?: number;
 }
 
@@ -186,3 +191,5 @@ export type TCrossConfig = ICrossFunctionParams & {
     tAmount: BigInt;
   };
 };
+
+export const starknetChainId = ["SN_MAIN", "SN_GOERLI"];

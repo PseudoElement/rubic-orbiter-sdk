@@ -11,7 +11,7 @@
 // import Web3 from "web3";
 // import config from "../constant/config";
 // import { CHAIN_ID_MAINNET } from "../constant/common";
-// import axios from "axios";
+// import Axios from "../request";
 // import { getRpcList } from "../utils";
 // import { IChainInfo } from "../types";
 
@@ -36,7 +36,7 @@
 //         : config.loopring.Mainnet
 //     }/api/v3/exchange/tokens`;
 //     try {
-//       const response = await axios.get(url);
+//       const response = await Axios.get(url);
 //       if (response.status === 200 && response?.data) {
 //         console.log(response, "responseresponseresponse");
 //         return response.data.find((item) => item.address == tokenAddress);
