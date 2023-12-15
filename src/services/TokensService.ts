@@ -9,8 +9,8 @@ import { throwNewError } from "../utils";
 import { queryTokens } from "./ApiService";
 import { isArray } from "lodash";
 
-export default class TokenService {
-  private static instance: TokenService;
+export default class TokensService {
+  private static instance: TokensService;
   private tokens: ITokensByChain = {};
   private readonly loadingPromise: Promise<void>;
 
@@ -18,9 +18,9 @@ export default class TokenService {
     this.loadingPromise = this.loadTokens();
   }
 
-  public static getInstance(): TokenService {
+  public static getInstance(): TokensService {
     if (!this.instance) {
-      this.instance = new TokenService();
+      this.instance = new TokensService();
     }
 
     return this.instance;
@@ -30,7 +30,7 @@ export default class TokenService {
     try {
       this.tokens = (await queryTokens()) || {};
     } catch (error) {
-      throwNewError("TokenService init failed.");
+      throwNewError("TokensService init failed.");
     }
   }
 
@@ -43,7 +43,7 @@ export default class TokenService {
     }
   }
 
-  public async getTokensByChainAsync() {
+  public async getTokensAllChainAsync() {
     await this.checkLoading();
     return this.tokens;
   }
@@ -53,7 +53,7 @@ export default class TokenService {
     return this.tokens[String(chainId)] || [];
   }
 
-  public async getTokensDecimals(
+  public async getTokensDecimalsAsync(
     chainId: string | number,
     token:
       | TTokenName
@@ -83,5 +83,27 @@ export default class TokenService {
       return tokensDecimals;
     }
     return findDecimals(token);
+  }
+
+  public async getTokenAsync(
+    chainId: string | number,
+    token: TTokenName | TAddress | TSymbol
+  ) {
+    await this.checkLoading();
+    const targetChainTokensInfo = this.tokens[String(chainId)] || [];
+    if (!targetChainTokensInfo.length) return void 0;
+
+    const findToken = (token: TTokenName | TAddress | TSymbol) => {
+      return (
+        targetChainTokensInfo.find((item: IToken) => {
+          return (
+            item.name === token ||
+            item.symbol === token ||
+            item.address === token
+          );
+        }) || void 0
+      );
+    };
+    return findToken(token);
   }
 }

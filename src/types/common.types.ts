@@ -140,7 +140,7 @@ export type TCrossConfig = ICrossFunctionParams & {
   };
 };
 
-export const starknetChainId = ["SN_MAIN", "SN_GOERLI"];
+export const STARKNET_CHAIN_ID = ["SN_MAIN", "SN_GOERLI"];
 
 export enum StarknetChainId {
   SN_MAIN = "0x534e5f4d41494e",

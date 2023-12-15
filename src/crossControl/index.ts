@@ -41,7 +41,7 @@ import {
 } from "./starknet_helper";
 import { Account } from "starknet";
 import { OrbiterRouterType, orbiterRouterTransfer } from "./orbiterRouter";
-import TokenService from "../services/TokenService";
+import TokenService from "../services/TokensService";
 
 export default class CrossControl {
   private static instance: CrossControl;
@@ -62,7 +62,7 @@ export default class CrossControl {
   }
 
   private async initCrossFunctionConfig(
-    signer: Signer | Account | any,
+    signer: Signer | Account,
     crossParams: ICrossFunctionParams
   ) {
     this.signer = signer;
@@ -118,9 +118,8 @@ export default class CrossControl {
         to,
         tradeFee,
         tValue,
-        account: signer?.getAddress
-          ? await signer?.getAddress()
-          : signer.address,
+        account:
+          "address" in signer ? signer.address : await signer?.getAddress(),
       };
     } catch (error) {
       throwNewError("init cross config error.", error);

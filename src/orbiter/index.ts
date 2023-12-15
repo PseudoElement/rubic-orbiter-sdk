@@ -1,11 +1,16 @@
-import { Signer } from "ethers-6";
+import {
+  ContractTransactionResponse,
+  Signer,
+  TransactionResponse,
+} from "ethers-6";
 import { Account } from "starknet";
 import BigNumber from "bignumber.js";
 import { HexString } from "ethers-6/lib.commonjs/utils/data";
 import ChainsService from "../services/ChainsService";
 import CrossRulesService from "../services/CrossRulesService";
-import TokenService from "../services/TokenService";
+import TokenService from "../services/TokensService";
 import HistoryService from "../services/HistoryService";
+import RefundService from "../services/RefundService";
 import CrossControl from "../crossControl";
 import {
   IChainInfo,
@@ -20,9 +25,9 @@ import {
   TBridgeResponse,
   TSymbol,
   TTokenName,
-  starknetChainId,
 } from "../types";
 import { throwNewError } from "../utils";
+import { isFromChainIdMatchProvider } from "./utils";
 
 export default class Orbiter {
   private static instance: Orbiter;
@@ -33,6 +38,7 @@ export default class Orbiter {
   private tokensService: TokenService;
   private crossRulesService: CrossRulesService;
   private historyService: HistoryService;
+  private refundService: RefundService;
 
   private crossControl: CrossControl;
 
@@ -44,6 +50,7 @@ export default class Orbiter {
     this.tokensService = TokenService.getInstance();
     this.crossRulesService = new CrossRulesService(this.dealerId);
     this.historyService = new HistoryService(this.signer);
+    this.refundService = new RefundService(this.signer);
 
     this.crossControl = CrossControl.getInstance();
   }
@@ -61,6 +68,7 @@ export default class Orbiter {
     this.dealerId = config.dealerId ?? this.dealerId;
 
     this.historyService.updateSigner(this.signer);
+    this.refundService.updateSigner(this.signer);
     this.crossRulesService.updateDealerId(this.dealerId);
   }
 
@@ -72,7 +80,7 @@ export default class Orbiter {
     return await this.chainsService.getChainInfoAsync(chainId);
   };
 
-  getTokensDecimals = async (
+  getTokensDecimalsAsync = async (
     chainId: string | number,
     token:
       | TTokenName
@@ -80,11 +88,18 @@ export default class Orbiter {
       | TSymbol
       | Array<TTokenName | TAddress | TSymbol>
   ) => {
-    return await this.tokensService.getTokensDecimals(chainId, token);
+    return await this.tokensService.getTokensDecimalsAsync(chainId, token);
   };
 
-  getTokensAsync = async (): Promise<ITokensByChain> => {
-    return await this.tokensService.getTokensByChainAsync();
+  getTokenAsync = async (
+    chainId: string | number,
+    token: TTokenName | TAddress | TSymbol
+  ) => {
+    return await this.tokensService.getTokenAsync(chainId, token);
+  };
+
+  getTokensAllChainAsync = async (): Promise<ITokensByChain> => {
+    return await this.tokensService.getTokensAllChainAsync();
   };
 
   getTokensByChainIdAsync = async (
@@ -123,6 +138,24 @@ export default class Orbiter {
     return await this.historyService.searchTransaction(txHash);
   };
 
+  toRefund = async (sendOptions: {
+    to: string;
+    amount: number | string;
+    token: TTokenName | TAddress | TSymbol;
+    fromChainId: string | number;
+  }): Promise<TransactionResponse | ContractTransactionResponse> => {
+    try {
+      const fromChainInfo = await this.getChainInfoAsync(
+        sendOptions.fromChainId
+      );
+
+      await isFromChainIdMatchProvider({ signer: this.signer, fromChainInfo });
+      return await this.refundService.toSend(sendOptions);
+    } catch (error: any) {
+      return throwNewError("toRefund function error", error.message);
+    }
+  };
+
   toBridge = async <T extends TBridgeResponse>(
     transferConfig: ITransferConfig
   ): Promise<T> => {
@@ -136,20 +169,8 @@ export default class Orbiter {
       transferExt,
     } = transferConfig;
     const fromChainInfo = await this.getChainInfoAsync(fromChainID);
-    let currentChainId: BigInt = 0n;
 
-    if ("getAddress" in this.signer) {
-      const currentNetwork = await this.signer.provider?.getNetwork();
-      currentChainId = currentNetwork?.chainId || 0n;
-      if (currentChainId !== BigInt(fromChainInfo.networkId)) {
-        return throwNewError("evm signer is not match with the source chain.");
-      }
-    } else {
-      if (!starknetChainId.includes(fromChainID))
-        return throwNewError(
-          "starknet account is not match with the source chain."
-        );
-    }
+    await isFromChainIdMatchProvider({ signer: this.signer, fromChainInfo });
 
     const toChainInfo = await this.getChainInfoAsync(toChainID);
     if (!fromChainInfo || !toChainInfo)

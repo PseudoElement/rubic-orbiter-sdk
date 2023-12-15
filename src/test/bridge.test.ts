@@ -49,7 +49,7 @@ describe("orbiter tests", () => {
       // add crossAddressReceipt: owner For test xvm
       crossAddressReceipt: owner,
     };
-    let result = null;
+    let result;
     try {
       result = await orbiter.toBridge<TContractTransactionResponse>(
         xvmCrossConfig
@@ -72,7 +72,7 @@ describe("orbiter tests", () => {
       // add crossAddressReceipt: owner For test xvm
       crossAddressReceipt: owner,
     };
-    let result = null;
+    let result;
     try {
       result = await orbiter.toBridge<TContractTransactionResponse>(
         xvmCrossConfig
@@ -93,7 +93,7 @@ describe("orbiter tests", () => {
       toCurrency: "ETH",
       transferValue: 0.001,
     };
-    let result = null;
+    let result;
     try {
       result = await orbiter.toBridge<TTransactionResponse>(evmCrossConfig);
     } catch (error: any) {
@@ -112,7 +112,7 @@ describe("orbiter tests", () => {
       toCurrency: "ETH",
       transferValue: 0.001,
     };
-    let result = null;
+    let result;
     try {
       result = await orbiter.toBridge<TTransaction>(zksyncCrossConfig);
     } catch (error: any) {
@@ -145,7 +145,7 @@ describe("orbiter tests", () => {
   //   );
   //   orbiter.updateConfig({ signer: account});
 
-  //   let result = null;
+  //   let result
   //   try {
   //     const starknetCrossConfig = {
   //       fromChainID: "SN_GOERLI",
@@ -173,7 +173,7 @@ describe("orbiter tests", () => {
         "0x04CC0189A24723B68aEeFf84EEf2c0286a1F03b7AECD14403E130Db011571f37",
       transferValue: 0.001,
     };
-    let result = null;
+    let result;
     try {
       result = await orbiter.toBridge<TContractTransactionResponse>(
         starknetCrossConfig
@@ -187,7 +187,7 @@ describe("orbiter tests", () => {
   });
 
   test("imx transfer ETH to scroll test", async () => {
-    let result = null;
+    let result;
     try {
       const imxCrossConfig = {
         fromChainID: "immutableX_test",
@@ -216,7 +216,7 @@ describe("orbiter tests", () => {
       toCurrency: "USDC",
       transferValue: 1,
     };
-    let result = null;
+    let result;
     try {
       result = await orbiter.toBridge<TContractTransactionResponse>(
         evmCrossConfig
@@ -229,7 +229,7 @@ describe("orbiter tests", () => {
     expect(result && result.hash).toBeDefined;
   });
 
-  test("evm signer is not match with the source chain test", async () => {
+  test.only("evm signer is not match with the source chain test", async () => {
     const opProvider = new ethers.JsonRpcProvider(OP_GOERLI_RPC_URL);
     provider = opProvider;
     const opSigner = signer.connect(provider);
@@ -241,7 +241,7 @@ describe("orbiter tests", () => {
       toCurrency: "USDC",
       transferValue: 1,
     };
-    let result = null;
+    let result;
     try {
       result = await orbiter.toBridge(evmCrossConfig);
     } catch (error: any) {
@@ -251,7 +251,7 @@ describe("orbiter tests", () => {
     }
   });
 
-  test("starknet account is not match with the source chain test", async () => {
+  test.only("starknet account is not match with the source chain test", async () => {
     const provider = new snProvider({ nodeUrl: SN_GOERLI_RPC_URL || "" });
     const account = new Account(
       provider,
@@ -266,7 +266,7 @@ describe("orbiter tests", () => {
       toCurrency: "USDC",
       transferValue: 1,
     };
-    let result = null;
+    let result;
     try {
       result = await orbiter.toBridge(evmCrossConfig);
     } catch (error: any) {

@@ -5,7 +5,7 @@ describe("token tests", () => {
   let orbiter: Orbiter = new Orbiter();
 
   test("get all chain tokens test", async () => {
-    const result = await orbiter.getTokensAsync();
+    const result = await orbiter.getTokensAllChainAsync();
     expect(Object.keys(result).length).gt(0);
   });
 
@@ -15,19 +15,25 @@ describe("token tests", () => {
   });
 
   test("get token decimals test", async () => {
-    const goerliUSDCDecimalByName = await orbiter.getTokensDecimals(5, "ETH");
+    const goerliUSDCDecimalByName = await orbiter.getTokensDecimalsAsync(
+      5,
+      "ETH"
+    );
     expect(goerliUSDCDecimalByName).eq(18);
 
-    const goerliUSDCDecimalBySymbol = await orbiter.getTokensDecimals(5, "ETH");
+    const goerliUSDCDecimalBySymbol = await orbiter.getTokensDecimalsAsync(
+      5,
+      "ETH"
+    );
     expect(goerliUSDCDecimalBySymbol).eq(18);
 
-    const goerliUSDCDecimalByAddress = await orbiter.getTokensDecimals(
+    const goerliUSDCDecimalByAddress = await orbiter.getTokensDecimalsAsync(
       5,
       "0x0000000000000000000000000000000000000000"
     );
     expect(goerliUSDCDecimalByAddress).eq(18);
 
-    const errorResult = await orbiter.getTokensDecimals(
+    const errorResult = await orbiter.getTokensDecimalsAsync(
       5555555,
       "0x5da066443180476e8f11222"
     );
@@ -35,7 +41,7 @@ describe("token tests", () => {
   });
 
   test("get tokens decimals test", async () => {
-    const tokensDecimals = (await orbiter.getTokensDecimals(5, [
+    const tokensDecimals = (await orbiter.getTokensDecimalsAsync(5, [
       "ETH",
       "0x0000000000000000000000000000000000000000",
     ])) as object;
