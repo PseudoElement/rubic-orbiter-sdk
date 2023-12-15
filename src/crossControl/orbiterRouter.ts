@@ -58,7 +58,6 @@ export async function orbiterRouterTransfer(params: {
     return throwNewError("xvm transfer toWalletAddress is empty.");
 
   const expectValue = await getExpectValue(
-    selectMakerConfig,
     transferValue,
     fromTokenInfo,
     toTokenInfo,
