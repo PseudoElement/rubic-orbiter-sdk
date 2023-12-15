@@ -130,7 +130,7 @@ export async function queryRouters(
   try {
     const queryTokensResult = await Axios.get(
       `https://openapi2.orbiter.finance/sdk/routers${
-        dealerId ? "/dealerId" : ""
+        dealerId ? `/${dealerId}` : ""
       }`
     );
     if (

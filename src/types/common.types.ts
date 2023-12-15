@@ -1,6 +1,11 @@
-import { Signer } from "ethers-6";
+import {
+  ContractTransactionResponse,
+  Signer,
+  TransactionResponse,
+} from "ethers-6";
 import { HexString } from "ethers-6/lib.commonjs/utils/data";
 import { Account } from "starknet";
+import { Transaction } from "zksync";
 
 export interface IOBridgeConfig {
   signer: Signer | Account;
@@ -70,20 +75,6 @@ export interface ITransactionInfo {
   toValue: string;
 }
 
-export interface ITxList {
-  chainId: string;
-  hash: string;
-  side: number;
-  status: number;
-  symbol: string;
-  timestamp: string;
-  value: string;
-}
-
-export interface IQueryChainInfosData {
-  data: IChainInfo[];
-}
-
 export interface ITransferExt {
   contractType: string;
   receiveStarknetAddress: string;
@@ -97,18 +88,6 @@ export interface ITransferConfig {
   transferValue: number;
   crossAddressReceipt?: string;
   transferExt?: ITransferExt;
-}
-
-export interface IBridgeConfig {
-  signer: Signer;
-  fromChainID: string;
-  fromCurrency: string;
-  toChainID: string;
-  toCurrency: string;
-  transferValue: number;
-  gasFee: number;
-  ethPrice: number;
-  crossAddressReceipt?: string;
 }
 
 export interface ITokensByChain {
@@ -172,13 +151,6 @@ export interface IRates {
   [k: string]: string;
 }
 
-export interface IToken {
-  name: string;
-  symbol: string;
-  decimals: number;
-  address: string;
-}
-
 export interface ISearchTxResponse {
   sourceId: string;
   targetId: string;
@@ -197,3 +169,21 @@ export interface ISearchTxResponse {
   targetTime: string;
   ruleId: string;
 }
+
+interface IImxTransactionResponse {
+  transfer_id: number;
+  status: string;
+  time: number;
+  sent_signature: string;
+}
+
+export type TContractTransactionResponse = ContractTransactionResponse;
+export type TTransactionResponse = TransactionResponse;
+export type TTransaction = Transaction;
+export type TIMXTransactionResponse = IImxTransactionResponse;
+
+export type TBridgeResponse =
+  | TContractTransactionResponse
+  | TTransactionResponse
+  | TTransaction
+  | TIMXTransactionResponse;

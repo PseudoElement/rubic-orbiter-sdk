@@ -1,11 +1,13 @@
 {
   "name": "orbiter-bridge-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Orbiter cross rollup SDK",
-  "main": "dist/index.js",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "test": "cross-env vitest --run --dangerouslyIgnoreUnhandledErrors",
-    "build": "cross-env tsc --project ./tsconfig.json && tsc --project ./tsconfig.cjs.json"
+    "test": "vitest --run --dangerouslyIgnoreUnhandledErrors",
+    "build": "tsc --project ./tsconfig.json && tsc --project ./tsconfig.cjs.json"
   },
   "files": [
     "dist"
@@ -20,6 +22,14 @@
     "cross-chain-bridge",
     "orbiter-bridge"
   ],
+  "homepage": "https://github.com/Orbiter-Finance/OB_BridgeSDK",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com:Orbiter-Finance/OB_BridgeSDK.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Orbiter-Finance/OB_BridgeSDK/issues"
+  },
   "author": "Alan <alanseveryzoer@gmail.com>",
   "license": "ISC",
   "dependencies": {
@@ -36,12 +46,9 @@
   "devDependencies": {
     "@types/lodash": "^4.14.202",
     "@types/web3": "^1.2.2",
-    "cross-env": "^7.0.3",
     "dotenv": "^16.3.1",
     "lodash": "^4.17.21",
-    "typescript": "^5.2.2",
     "vitest": "^0.34.6",
-    "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4"
+    "typescript": "^5.3.3"
   }
 }

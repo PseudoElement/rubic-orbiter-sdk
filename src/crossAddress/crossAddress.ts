@@ -6,7 +6,7 @@ import {
   Signer,
   toBigInt,
 } from "ethers-6";
-import { Coin_ABI, CROSS_ADDRESS_ABI } from "../constant/abi";
+import { Coin_ABI, CROSS_ADDRESS_ABI } from "../constant/common";
 import { hexConcat, hexDataSlice } from "./util";
 import { padStart } from "lodash";
 import { IChainInfo, ITransferExt } from "../types";

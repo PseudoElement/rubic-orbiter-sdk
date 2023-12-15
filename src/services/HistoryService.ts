@@ -6,8 +6,6 @@ import { ISearchTxResponse, ITransactionInfo } from "../types";
 import { throwNewError } from "../utils";
 import { Signer } from "ethers-6";
 import { Account } from "starknet";
-import ChainsService from "./ChainsService";
-import TokenService from "./TokenService";
 
 export default class HistoryService {
   private signer: Account | Signer;

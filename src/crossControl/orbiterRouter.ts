@@ -1,7 +1,7 @@
 import Web3 from "web3";
-import { Coin_ABI, ORBITER_ROUTER_V3_ABI } from "../constant/abi";
+import { Coin_ABI, ORBITER_ROUTER_V3_ABI } from "../constant/common";
 import RLP from "rlp";
-import { Signer, Contract } from "ethers-6";
+import { Signer, Contract, ContractTransactionResponse } from "ethers-6";
 import {
   throwNewError,
   getContractAddressByType,
@@ -30,7 +30,7 @@ export async function orbiterRouterTransfer(params: {
   fromTokenInfo: IToken;
   toTokenInfo: IToken;
   tradeFee: string;
-}) {
+}): Promise<ContractTransactionResponse> {
   const {
     type,
     toWalletAddress,
@@ -117,12 +117,14 @@ async function orbiterRouterSend(
   data: Buffer,
   value: BigInt,
   isETH: boolean
-) {
+): Promise<ContractTransactionResponse> {
   const contractAddress =
     fromChainInfo.contract &&
     getContractAddressByType(fromChainInfo.contract, CONTRACT_TYPE_ROUTER_V3);
   if (!contractAddress) {
-    throw new Error(`Network ${chainId} does not support contract sending`);
+    return throwNewError(
+      `Network ${chainId} does not support contract sending`
+    );
   }
   const contractInstance = new Contract(
     contractAddress,
@@ -133,7 +135,7 @@ async function orbiterRouterSend(
     return contractInstance.transfer(toAddress, data, {
       from: fromAddress,
       value,
-    });
+    }) as Promise<ContractTransactionResponse>;
   } else {
     const tokenContractInstance = new Contract(tokenAddress, Coin_ABI, signer);
     const account = await signer.getAddress();
@@ -152,7 +154,7 @@ async function orbiterRouterSend(
       data
     );
 
-    return await contractInstance.transferToken(
+    return (await contractInstance.transferToken(
       tokenAddress,
       toAddress,
       value,
@@ -161,6 +163,6 @@ async function orbiterRouterSend(
         from: fromAddress,
         gas: gasLimit,
       }
-    );
+    )) as Promise<ContractTransactionResponse>;
   }
 }

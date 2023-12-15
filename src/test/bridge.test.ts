@@ -3,6 +3,12 @@ import { Provider, Signer, Wallet, ethers } from "ethers-6";
 import { beforeAll, describe, expect, test } from "vitest";
 import Orbiter from "../orbiter";
 import { Account, RpcProvider as snProvider } from "starknet";
+import {
+  TContractTransactionResponse,
+  TIMXTransactionResponse,
+  TTransaction,
+  TTransactionResponse,
+} from "../types";
 
 describe("orbiter tests", () => {
   // add your private key to the environment to be able to run the tests
@@ -45,12 +51,15 @@ describe("orbiter tests", () => {
     };
     let result = null;
     try {
-      result = await orbiter.toBridge(xvmCrossConfig);
+      result = await orbiter.toBridge<TContractTransactionResponse>(
+        xvmCrossConfig
+      );
     } catch (error: any) {
       console.log(error.message);
     }
-    console.log(result.hash);
-    expect(result.hash).toBeDefined;
+    console.log(result, "xvmEth");
+    console.log(result && result.hash, "xvmEthHash");
+    expect(result && result.hash).toBeDefined;
   });
 
   test("xvm ERC20 cross test", async () => {
@@ -65,12 +74,15 @@ describe("orbiter tests", () => {
     };
     let result = null;
     try {
-      result = await orbiter.toBridge(xvmCrossConfig);
+      result = await orbiter.toBridge<TContractTransactionResponse>(
+        xvmCrossConfig
+      );
     } catch (error: any) {
       console.log(error.message);
     }
-    console.log(result.hash);
-    expect(result.hash).toBeDefined;
+    console.log(result, "xvmERC20");
+    console.log(result && result.hash, "xvmERC20Hash");
+    expect(result && result.hash).toBeDefined;
   });
 
   test("evm ETH cross to op test", async () => {
@@ -83,12 +95,13 @@ describe("orbiter tests", () => {
     };
     let result = null;
     try {
-      result = await orbiter.toBridge(evmCrossConfig);
+      result = await orbiter.toBridge<TTransactionResponse>(evmCrossConfig);
     } catch (error: any) {
       console.log(error.message);
     }
-    console.log(result.hash);
-    expect(result.hash).toBeDefined;
+    console.log(result, "evmETH");
+    console.log(result && result.hash, "evmETHHash");
+    expect(result && result.hash).toBeDefined;
   });
 
   test("zksync lite ETH cross to op test", async () => {
@@ -101,12 +114,13 @@ describe("orbiter tests", () => {
     };
     let result = null;
     try {
-      result = await orbiter.toBridge(zksyncCrossConfig);
+      result = await orbiter.toBridge<TTransaction>(zksyncCrossConfig);
     } catch (error: any) {
       console.log(error.message);
     }
-    console.log(result.txHash);
-    expect(result.txHash).toBeDefined;
+    console.log(result, "zksync lite eth");
+    console.log(result && result.txHash, "zksync lite hash");
+    expect(result && result.txHash).toBeDefined;
   });
 
   // test("loopring ETH cross test", async () => {
@@ -161,12 +175,15 @@ describe("orbiter tests", () => {
     };
     let result = null;
     try {
-      result = await orbiter.toBridge(starknetCrossConfig);
+      result = await orbiter.toBridge<TContractTransactionResponse>(
+        starknetCrossConfig
+      );
     } catch (error: any) {
       console.log(error.message);
     }
-    console.log(result.hash);
-    expect(result.hash).toBeDefined;
+    console.log(result, "transfer to starknet");
+    console.log(result && result.hash, "transfer to starknet hash");
+    expect(result && result.hash).toBeDefined;
   });
 
   test("imx transfer ETH to scroll test", async () => {
@@ -179,11 +196,11 @@ describe("orbiter tests", () => {
         toCurrency: "ETH",
         transferValue: 0.001,
       };
-      result = await orbiter.toBridge(imxCrossConfig);
+      result = await orbiter.toBridge<TIMXTransactionResponse>(imxCrossConfig);
     } catch (error: any) {
       console.log(error.message);
     }
-    console.log(result);
+    console.log(result, "imx eth");
     expect(result).toBeDefined();
   });
 
@@ -201,12 +218,15 @@ describe("orbiter tests", () => {
     };
     let result = null;
     try {
-      result = await orbiter.toBridge(evmCrossConfig);
+      result = await orbiter.toBridge<TContractTransactionResponse>(
+        evmCrossConfig
+      );
     } catch (error: any) {
       console.log(error.message);
     }
-    console.log(result.hash);
-    expect(result.hash).toBeDefined;
+    console.log(result, "evm erc20");
+    console.log(result && result.hash, "evm erc20 hash");
+    expect(result && result.hash).toBeDefined;
   });
 
   test("evm signer is not match with the source chain test", async () => {

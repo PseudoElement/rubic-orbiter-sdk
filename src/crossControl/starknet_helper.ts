@@ -1,5 +1,5 @@
 import { Account, Contract, uint256, validateAndParseAddress } from "starknet";
-import { STARKNET_ERC20_ABI, STARKNET_OB_SOURCE_ABI } from "../constant/abi";
+import { STARKNET_ERC20_ABI, STARKNET_OB_SOURCE_ABI } from "../constant/common";
 import { CONTRACT_TYPE_SOURCE, UINT_256_MAX } from "../constant/common";
 import { getContractAddressByType, throwNewError } from "../utils";
 import { IChainInfo } from "../types";

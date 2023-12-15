@@ -1,8 +1,17 @@
-import { Signer } from "ethers-6";
+import {
+  ContractTransactionResponse,
+  Signer,
+  TransactionResponse,
+} from "ethers-6";
 import ethers from "ethers";
-import { submitSignedTransactionsBatch, utils, Wallet } from "zksync";
+import {
+  submitSignedTransactionsBatch,
+  Transaction,
+  utils,
+  Wallet,
+} from "zksync";
 import { CrossAddress } from "../crossAddress/crossAddress";
-import loopring from "./loopring";
+// import loopring from "./loopring";
 import {
   getTransferValue,
   getZkSyncProvider,
@@ -15,7 +24,7 @@ import {
   isEthTokenAddress,
   throwNewError,
 } from "../utils";
-import { ICrossFunctionParams, TCrossConfig } from "../types";
+import { ICrossFunctionParams, TBridgeResponse, TCrossConfig } from "../types";
 import {
   CHAIN_ID_MAINNET,
   CHAIN_ID_TESTNET,
@@ -118,10 +127,10 @@ export default class CrossControl {
     }
   }
 
-  public async getCrossFunction(
+  public async getCrossFunction<T extends TBridgeResponse>(
     signer: Signer | Account,
     crossParams: ICrossFunctionParams
-  ) {
+  ): Promise<T> {
     await this.initCrossFunctionConfig(signer, crossParams);
     const {
       fromChainID,
@@ -171,7 +180,7 @@ export default class CrossControl {
     }
   }
 
-  private async xvmTransfer(): Promise<any> {
+  private async xvmTransfer<T>(): Promise<T> {
     const {
       fromChainInfo,
       crossAddressReceipt,
@@ -210,7 +219,7 @@ export default class CrossControl {
         fromTokenInfo.symbol === toTokenInfo.symbol
           ? OrbiterRouterType.CrossAddress
           : OrbiterRouterType.CrossAddressCurrency;
-      return await orbiterRouterTransfer({
+      return (await orbiterRouterTransfer({
         signer: this.signer,
         type,
         value: amount,
@@ -222,19 +231,17 @@ export default class CrossControl {
         fromTokenInfo,
         toTokenInfo,
         tradeFee,
-      });
+      })) as T;
     } catch (error) {
       return throwNewError("XVM transfer error", error);
     }
   }
 
-  private async evmTransfer() {
+  private async evmTransfer<T>(): Promise<T> {
     const {
       fromChainID,
-      fromChainInfo,
       selectMakerConfig,
       tokenAddress,
-      to,
       account,
       tValue,
       isETH,
@@ -248,7 +255,7 @@ export default class CrossControl {
       gasLimit = 21000n;
     }
     if (isETH) {
-      const tx = await this.signer.sendTransaction({
+      const tx: T = await this.signer.sendTransaction({
         from: account,
         to: selectMakerConfig.endpoint,
         value: tValue?.tAmount,
@@ -274,20 +281,20 @@ export default class CrossControl {
                 selectMakerConfig.endpoint,
                 tValue?.tAmount
               );
-        return await transferContract.transfer(
+        return (await transferContract.transfer(
           selectMakerConfig.endpoint,
           tValue?.tAmount,
           {
             gasLimit,
           }
-        );
+        )) as T;
       } catch (error) {
         console.log(error);
         return throwNewError("evm transfer error", error);
       }
     }
   }
-  private async zkTransfer() {
+  private async zkTransfer<T>(): Promise<T> {
     const { selectMakerConfig, fromChainID, tValue } = this.crossConfig;
     const tokenAddress = selectMakerConfig.srcToken;
     const syncProvider = await getZkSyncProvider(fromChainID);
@@ -361,7 +368,7 @@ export default class CrossControl {
         fee: transferFee.totalFee,
       });
       const batchTransactionData = await batchBuilder.build();
-      const transactions = await submitSignedTransactionsBatch(
+      const transactions: Transaction[] = await submitSignedTransactionsBatch(
         syncWallet.provider,
         batchTransactionData.txs,
         [batchTransactionData.signature]
@@ -373,68 +380,67 @@ export default class CrossControl {
           break;
         }
       }
-      return transaction;
+      return transaction as T;
     } else {
       try {
-        return await syncWallet.syncTransfer({
+        return (await syncWallet.syncTransfer({
           to: selectMakerConfig.endpoint,
           token: tokenAddress,
           amount,
-        });
+        })) as T;
       } catch (error) {
         return throwNewError("sync wallet syncTransfer was wrong", error);
       }
     }
   }
 
-  private async loopringTransfer() {
-    const {
-      selectMakerConfig,
-      crossAddressReceipt,
-      fromChainID,
-      tValue,
-      tokenAddress,
-      fromChainInfo,
-      toChainInfo,
-      account,
-    } = this.crossConfig;
-    const p_text = 9000 + Number(toChainInfo.internalId) + "";
-    const amount = tValue.tAmount;
-    const memo = crossAddressReceipt
-      ? `${p_text}_${crossAddressReceipt}`
-      : p_text;
-    if (memo.length > 128)
-      return throwNewError("The sending address is too long");
-    try {
-      return await loopring.sendTransfer(
-        account,
-        fromChainID,
-        fromChainInfo,
-        selectMakerConfig.endpoint,
-        tokenAddress,
-        amount,
-        memo
-      );
-    } catch (error: any) {
-      const errorEnum = {
-        "account is not activated":
-          "This Loopring account is not yet activated, please activate it before transferring.",
-        "User account is frozen":
-          "Your Loopring account is frozen, please check your Loopring account status on Loopring website. Get more details here: https://docs.loopring.io/en/basics/key_mgmt.html?h=frozen",
-        default: error.message,
-      };
-      return throwNewError(
-        errorEnum[error.message as keyof typeof errorEnum] ||
-          errorEnum.default ||
-          "Something was wrong by loopring transfer. please check it all"
-      );
-    }
-  }
+  // private async loopringTransfer<T>(): Promise<T> {
+  //   const {
+  //     selectMakerConfig,
+  //     crossAddressReceipt,
+  //     fromChainID,
+  //     tValue,
+  //     tokenAddress,
+  //     fromChainInfo,
+  //     toChainInfo,
+  //     account,
+  //   } = this.crossConfig;
+  //   const p_text = 9000 + Number(toChainInfo.internalId) + "";
+  //   const amount = tValue.tAmount;
+  //   const memo = crossAddressReceipt
+  //     ? `${p_text}_${crossAddressReceipt}`
+  //     : p_text;
+  //   if (memo.length > 128)
+  //     return throwNewError("The sending address is too long");
+  //   try {
+  //     return await loopring.sendTransfer(
+  //       account,
+  //       fromChainID,
+  //       fromChainInfo,
+  //       selectMakerConfig.endpoint,
+  //       tokenAddress,
+  //       amount,
+  //       memo
+  //     );
+  //   } catch (error: any) {
+  //     const errorEnum = {
+  //       "account is not activated":
+  //         "This Loopring account is not yet activated, please activate it before transferring.",
+  //       "User account is frozen":
+  //         "Your Loopring account is frozen, please check your Loopring account status on Loopring website. Get more details here: https://docs.loopring.io/en/basics/key_mgmt.html?h=frozen",
+  //       default: error.message,
+  //     };
+  //     return throwNewError(
+  //       errorEnum[error.message as keyof typeof errorEnum] ||
+  //         errorEnum.default ||
+  //         "Something was wrong by loopring transfer. please check it all"
+  //     );
+  //   }
+  // }
 
-  private async starknetTransfer() {
+  private async starknetTransfer<T>(): Promise<T> {
     const {
       selectMakerConfig,
-      fromChainID,
       account,
       crossAddressReceipt,
       fromChainInfo,
@@ -446,24 +452,24 @@ export default class CrossControl {
     if (!crossAddressReceipt)
       return throwNewError("crossAddressReceipt can not be empty.");
     if (selectMakerConfig.endpoint.length < 60) {
-      return;
+      return throwNewError("crossAddressReceipt iserror.");
     }
     try {
       const contractAddress = selectMakerConfig.srcToken;
-      return await sendTransfer(
+      return (await sendTransfer(
         this.signer,
         crossAddressReceipt,
         contractAddress,
         selectMakerConfig.endpoint,
         new BigNumber(tValue.tAmount.toString()),
         fromChainInfo
-      );
+      )) as T;
     } catch (error) {
       return throwNewError("starknet transfer error", error);
     }
   }
 
-  private async transferToStarkNet() {
+  private async transferToStarkNet<T>(): Promise<T> {
     const {
       selectMakerConfig,
       tValue,
@@ -494,7 +500,7 @@ export default class CrossControl {
       return throwNewError("Contract not in fromChainInfo.");
     }
     try {
-      return await orbiterRouterTransfer({
+      return (await orbiterRouterTransfer({
         signer: this.signer,
         type: OrbiterRouterType.CrossAddress,
         value: tValue.tAmount,
@@ -506,12 +512,12 @@ export default class CrossControl {
         fromTokenInfo,
         toTokenInfo,
         tradeFee,
-      });
+      })) as T;
     } catch (err) {
       return throwNewError("transfer to starknet error", err);
     }
   }
-  private async imxTransfer() {
+  private async imxTransfer<T>(): Promise<T> {
     const {
       selectMakerConfig,
       fromChainID,
@@ -553,14 +559,14 @@ export default class CrossControl {
           },
         };
       }
-      return await imxClient.transfer({
+      return (await imxClient.transfer({
         sender: account,
         token: tokenInfo,
         quantity: ethers.BigNumber.from(tValue.tAmount.toString()),
         receiver: selectMakerConfig.endpoint,
-      });
+      })) as T;
     } catch (error: any) {
-      throwNewError("Imx transfer error", error);
+      return throwNewError("Imx transfer error", error);
     }
   }
 }

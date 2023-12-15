@@ -1,3 +1,7 @@
+import { Signer } from "ethers-6";
+import { Account } from "starknet";
+import BigNumber from "bignumber.js";
+import { HexString } from "ethers-6/lib.commonjs/utils/data";
 import ChainsService from "../services/ChainsService";
 import CrossRulesService from "../services/CrossRulesService";
 import TokenService from "../services/TokenService";
@@ -13,15 +17,12 @@ import {
   ITransactionInfo,
   ITransferConfig,
   TAddress,
+  TBridgeResponse,
   TSymbol,
   TTokenName,
   starknetChainId,
 } from "../types";
-import { Signer } from "ethers-6";
 import { throwNewError } from "../utils";
-import { Account } from "starknet";
-import BigNumber from "bignumber.js";
-import { HexString } from "ethers-6/lib.commonjs/utils/data";
 
 export default class Orbiter {
   private static instance: Orbiter;
@@ -47,20 +48,20 @@ export default class Orbiter {
     this.crossControl = CrossControl.getInstance();
   }
 
-  public updateConfig(config: Partial<IOBridgeConfig>): void {
-    this.signer = config.signer ?? this.signer;
-    this.dealerId = config.dealerId ?? this.dealerId;
-
-    this.historyService.updateSigner(this.signer);
-    this.crossRulesService.updateDealerId(this.dealerId);
-  }
-
   public static getInstance(): Orbiter {
     if (!this.instance) {
       this.instance = new Orbiter();
     }
 
     return this.instance;
+  }
+
+  public updateConfig(config: Partial<IOBridgeConfig>): void {
+    this.signer = config.signer ?? this.signer;
+    this.dealerId = config.dealerId ?? this.dealerId;
+
+    this.historyService.updateSigner(this.signer);
+    this.crossRulesService.updateDealerId(this.dealerId);
   }
 
   getChainsAsync = async (): Promise<IChainInfo[]> => {
@@ -122,7 +123,9 @@ export default class Orbiter {
     return await this.historyService.searchTransaction(txHash);
   };
 
-  toBridge = async (transferConfig: ITransferConfig) => {
+  toBridge = async <T extends TBridgeResponse>(
+    transferConfig: ITransferConfig
+  ): Promise<T> => {
     if (!this.signer) throw new Error("Can not find signer, please check it!");
     const {
       fromChainID,
@@ -172,7 +175,7 @@ export default class Orbiter {
       );
 
     try {
-      return await this.crossControl.getCrossFunction(this.signer, {
+      return await this.crossControl.getCrossFunction<T>(this.signer, {
         ...transferConfig,
         fromChainInfo,
         toChainInfo,
@@ -180,7 +183,7 @@ export default class Orbiter {
         transferExt,
       });
     } catch (error) {
-      throwNewError("Bridge getCrossFunction error", error);
+      return throwNewError("Bridge getCrossFunction error", error);
     }
   };
 }
