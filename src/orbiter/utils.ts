@@ -1,15 +1,15 @@
 import {
   CHAIN_ID_MAINNET,
   CHAIN_ID_TESTNET,
-  CHAIN_INDEX,
   MAX_BITS,
   SIZE_OP,
 } from "../constant/common";
-import { IChainInfo, ICrossRule } from "../types";
+import { IChainInfo, ICrossRule, IRates, IToken } from "../types";
 import BigNumber from "bignumber.js";
 import { equalsIgnoreCase, throwNewError } from "../utils";
-import Axios from "../request";
 import * as zksync from "zksync";
+import { queryRates } from "../services/ApiService";
+import { isObject } from "lodash";
 
 export const isExecuteOrbiterRouterV3 = (data: {
   fromCurrency: string;
@@ -46,11 +46,8 @@ export const isSupportOrbiterRouterV3 = (data: {
   fromChainInfo: IChainInfo;
   toChainID: string;
 }) => {
-  const { selectMakerConfig, fromChainID, fromChainInfo, toChainID } = data;
+  const { fromChainID, fromChainInfo, toChainID } = data;
   if (isStarkNet(fromChainID, toChainID)) {
-    return false;
-  }
-  if (selectMakerConfig.ebcId) {
     return false;
   }
   return !!Object.values(fromChainInfo?.contract || {}).find(
@@ -67,81 +64,27 @@ export const isStarkNet = (fromChainID: string, toChainID: string) => {
   );
 };
 
-export const isExecuteXVMContract = (sendInfo: {
-  fromChainID: number | string;
-  fromChainInfo: IChainInfo;
-  toChainID: number | string;
-  fromCurrency: string;
-  toCurrency: string;
-  crossAddressReceipt?: string;
-}) => {
-  const {
-    fromChainID,
-    fromChainInfo,
-    toChainID,
-    fromCurrency,
-    toCurrency,
-    crossAddressReceipt,
-  } = sendInfo;
-  if (
-    fromChainID === 4 ||
-    fromChainID === 44 ||
-    toChainID === 4 ||
-    toChainID === 44
-  ) {
-    return false;
-  }
-  return (
-    fromChainInfo?.xvmList?.length &&
-    (fromCurrency !== toCurrency || !!crossAddressReceipt)
-  );
-};
-
-const safeCode = (codeParams: {
-  toChain: ICrossRule["toChain"];
-  dealerId?: ICrossRule["dealerId"];
-  ebcId?: ICrossRule["ebcId"];
-  toChainInfo: IChainInfo;
-}) => {
-  const { toChain, dealerId, ebcId, toChainInfo } = codeParams;
-  const internalId =
-    String(toChain?.id).length < 2 ? "0" + toChain.id : toChain.id;
-  const currentDealerId =
-    String(dealerId || 0).length < 2 ? "0" + dealerId : dealerId;
-  return ebcId
-    ? currentDealerId + ebcId + internalId
-    : 9000 + Number(toChainInfo.internalId) + "";
-};
-
 export const getTransferValue = (transferInfo: {
   toChainID: string;
   fromChainID: string | number;
   fromChainInfo: IChainInfo;
   toChainInfo: IChainInfo;
   transferValue: number;
-  tradingFee: string;
   decimals: number;
   selectMakerConfig: ICrossRule;
 }) => {
   const {
     fromChainID,
     transferValue,
-    tradingFee,
     fromChainInfo,
-    toChainInfo,
     decimals,
     selectMakerConfig,
   } = transferInfo;
   const rAmount = new BigNumber(transferValue)
-    .plus(new BigNumber(tradingFee))
+    .plus(new BigNumber(selectMakerConfig.withholdingFee))
     .multipliedBy(new BigNumber(10 ** decimals));
   const rAmountValue = rAmount.toFixed();
-  const p_text = safeCode({
-    toChain: selectMakerConfig.toChain,
-    dealerId: selectMakerConfig?.dealerId,
-    ebcId: selectMakerConfig?.ebcId,
-    toChainInfo,
-  });
+  const p_text = selectMakerConfig.vc;
   return getTAmountFromRAmount(
     fromChainID,
     rAmountValue,
@@ -285,51 +228,31 @@ function removeSidesZero(param: string) {
   return param.replace(/^0+(\d)|(\d)0+$/gm, "$1$2");
 }
 
-/**
- * @param {string} tokenAddress when tokenAddress=/^0x0+$/i,
- * @returns {boolean}
- */
-export const isEthTokenAddress = (
-  tokenAddress: string,
-  fromChainInfo: IChainInfo
-): boolean => {
-  if (fromChainInfo) {
-    const isMainCoin = equalsIgnoreCase(
-      fromChainInfo.nativeCurrency.address,
-      tokenAddress
-    );
-    if (isMainCoin) return true;
-    const isERC20 = fromChainInfo.tokens.find((item) =>
-      equalsIgnoreCase(item.address, tokenAddress)
-    );
-    if (isERC20) return false;
-  }
-  return /^0x0+$/i.test(tokenAddress);
-};
 export async function getExpectValue(
   selectMakerConfig: ICrossRule,
   transferValue: number | string,
-  fromCurrency: string,
-  toCurrency: string
+  fromTokenInfo: IToken,
+  toTokenInfo: IToken,
+  tradeFee: string
 ) {
   const value = new BigNumber(transferValue);
 
-  const gasFee = value
-    .multipliedBy(new BigNumber(selectMakerConfig.gasFee))
-    .dividedBy(new BigNumber(1000));
+  const gasFee = value.multipliedBy(new BigNumber(tradeFee));
   const gasFee_fix = gasFee.decimalPlaces(
-    selectMakerConfig.fromChain.decimals === 18 ? 5 : 2,
+    fromTokenInfo.decimals === 18 ? 5 : 2,
     BigNumber.ROUND_UP
   );
 
   const toAmount = value.minus(gasFee_fix);
-  const expectValue = toAmount.multipliedBy(
-    10 ** selectMakerConfig.toChain.decimals
-  );
+  const expectValue = toAmount.multipliedBy(10 ** toTokenInfo.decimals);
 
-  if (fromCurrency !== toCurrency) {
+  if (fromTokenInfo.symbol !== toTokenInfo.symbol) {
     return (
-      await exchangeToCoin(expectValue, fromCurrency, toCurrency)
+      await exchangeToCoin(
+        expectValue,
+        fromTokenInfo.symbol,
+        toTokenInfo.symbol
+      )
     ).toFixed(0);
   } else {
     return expectValue.toFixed(0);
@@ -345,9 +268,13 @@ export async function exchangeToCoin(
   if (!(value instanceof BigNumber)) {
     value = new BigNumber(value);
   }
-  const exchangeRates = rates || (await getRates(sourceCurrency));
-  const fromRate = exchangeRates[sourceCurrency];
-  const toRate = exchangeRates[toCurrency];
+  const exchangeRates = rates ?? (await getRates(sourceCurrency));
+  const fromRate = isObject(exchangeRates)
+    ? exchangeRates[sourceCurrency]
+    : exchangeRates;
+  const toRate = isObject(exchangeRates)
+    ? exchangeRates[toCurrency]
+    : exchangeRates;
   if (!fromRate || !toRate) {
     return new BigNumber(0);
   }
@@ -356,16 +283,14 @@ export async function exchangeToCoin(
 
 export async function getRates(currency: string) {
   try {
-    const resp = await Axios.get(
-      `https://api.coinbase.com/v2/exchange-rates?currency=${currency}`
-    );
-    const data = resp.data?.data;
+    const resp = await queryRates(currency);
+    const data: { rates: IRates; currency: string } = resp?.data?.data;
     if (!data || !equalsIgnoreCase(data.currency, currency) || !data.rates) {
-      return undefined;
+      return {} as IRates;
     }
     return data.rates;
   } catch (error: any) {
-    throwNewError(error);
+    return throwNewError(error);
   }
 }
 

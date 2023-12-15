@@ -7,7 +7,7 @@ import {
   IChainInfo,
   ICrossRule,
   IOBridgeConfig,
-  ISearchTxData,
+  ISearchTxResponse,
   IToken,
   ITokensByChain,
   ITransactionInfo,
@@ -20,9 +20,13 @@ import {
 import { Signer } from "ethers-6";
 import { throwNewError } from "../utils";
 import { Account } from "starknet";
+import BigNumber from "bignumber.js";
+import { HexString } from "ethers-6/lib.commonjs/utils/data";
 
 export default class Orbiter {
+  private static instance: Orbiter;
   private signer: Signer | Account;
+  private dealerId: string | HexString;
 
   private chainsService: ChainsService;
   private tokensService: TokenService;
@@ -32,19 +36,31 @@ export default class Orbiter {
   private crossControl: CrossControl;
 
   constructor(config?: IOBridgeConfig) {
-    this.signer = config?.signer || ({} as Signer);
+    this.signer = config?.signer || ({} as Signer | Account);
+    this.dealerId = config?.dealerId || "";
 
     this.chainsService = ChainsService.getInstance();
     this.tokensService = TokenService.getInstance();
-    this.crossRulesService = CrossRulesService.getInstance();
-    this.historyService = new HistoryService(config?.signer || ({} as Signer));
+    this.crossRulesService = new CrossRulesService(this.dealerId);
+    this.historyService = new HistoryService(this.signer);
 
     this.crossControl = CrossControl.getInstance();
   }
 
-  public updateSigner(signer: Signer | Account): void {
-    this.signer = signer;
-    this.historyService.updateSigner(signer);
+  public updateConfig(config: Partial<IOBridgeConfig>): void {
+    this.signer = config.signer ?? this.signer;
+    this.dealerId = config.dealerId ?? this.dealerId;
+
+    this.historyService.updateSigner(this.signer);
+    this.crossRulesService.updateDealerId(this.dealerId);
+  }
+
+  public static getInstance(): Orbiter {
+    if (!this.instance) {
+      this.instance = new Orbiter();
+    }
+
+    return this.instance;
   }
 
   getChainsAsync = async (): Promise<IChainInfo[]> => {
@@ -66,7 +82,7 @@ export default class Orbiter {
     return await this.tokensService.getTokensDecimals(chainId, token);
   };
 
-  getAllChainTokensAsync = async (): Promise<ITokensByChain> => {
+  getTokensAsync = async (): Promise<ITokensByChain> => {
     return await this.tokensService.getTokensByChainAsync();
   };
 
@@ -76,17 +92,18 @@ export default class Orbiter {
     return await this.tokensService.getTokensByChainIdAsync(chainId);
   };
 
-  getRulesAsync = async (): Promise<ICrossRule[]> => {
-    return await this.crossRulesService.getRulesAsync();
+  queryRulesAsync = async (): Promise<ICrossRule[]> => {
+    return await this.crossRulesService.queryRulesAsync();
   };
 
-  getRuleByPairId = async (params: {
+  queryRouterRule = async (params: {
+    dealerId: string | HexString;
     fromChainInfo: IChainInfo;
     toChainInfo: IChainInfo;
     fromCurrency: string;
     toCurrency: string;
   }): Promise<ICrossRule> => {
-    return await this.crossRulesService.getRuleByPairId(params);
+    return await this.crossRulesService.queryRouterRule(params);
   };
 
   getHistoryListAsync = async (params: {
@@ -100,10 +117,9 @@ export default class Orbiter {
   };
 
   searchTransaction = async (
-    txHash: string,
-    fromChainID: number | string
-  ): Promise<ISearchTxData | undefined> => {
-    return await this.historyService.searchTransaction(txHash, fromChainID);
+    txHash: string
+  ): Promise<ISearchTxResponse | undefined> => {
+    return await this.historyService.searchTransaction(txHash);
   };
 
   toBridge = async (transferConfig: ITransferConfig) => {
@@ -118,10 +134,11 @@ export default class Orbiter {
     } = transferConfig;
     const fromChainInfo = await this.getChainInfoAsync(fromChainID);
     let currentChainId: BigInt = 0n;
+
     if ("getAddress" in this.signer) {
       const currentNetwork = await this.signer.provider?.getNetwork();
       currentChainId = currentNetwork?.chainId || 0n;
-      if (currentChainId !== BigInt(fromChainInfo.chainId)) {
+      if (currentChainId !== BigInt(fromChainInfo.networkId)) {
         return throwNewError("evm signer is not match with the source chain.");
       }
     } else {
@@ -130,24 +147,30 @@ export default class Orbiter {
           "starknet account is not match with the source chain."
         );
     }
+
     const toChainInfo = await this.getChainInfoAsync(toChainID);
     if (!fromChainInfo || !toChainInfo)
       throw new Error("Cant get ChainInfo by fromChainId or to toChainId.");
-    const selectMakerConfig = await this.getRuleByPairId({
+
+    const selectMakerConfig = await this.queryRouterRule({
+      dealerId: this.dealerId,
       fromChainInfo,
       toChainInfo,
       fromCurrency,
       toCurrency,
     });
+
     if (selectMakerConfig && !Object.keys(selectMakerConfig).length)
       throw new Error("has no rule match, pls check your params!");
+
     if (
-      transferValue > selectMakerConfig.fromChain.maxPrice ||
-      transferValue < selectMakerConfig.fromChain.minPrice
+      new BigNumber(transferValue).gt(selectMakerConfig.maxAmt) ||
+      new BigNumber(transferValue).lt(selectMakerConfig.minAmt)
     )
       throw new Error(
         "Not in the correct price range, please check your value"
       );
+
     try {
       return await this.crossControl.getCrossFunction(this.signer, {
         ...transferConfig,

@@ -1,13 +1,5 @@
-import {
-  BigNumberish,
-  BytesLike,
-  Signer,
-  TransactionResponse,
-  hexlify,
-  isHexString,
-} from "ethers-6";
-import { requestWeb3, throwNewError } from "../utils";
-import { IChainInfo } from "../types";
+import { BytesLike, hexlify, isHexString } from "ethers-6";
+import { throwNewError } from "../utils";
 
 export function hexConcat(items: ReadonlyArray<BytesLike>): string {
   let result = "0x";
@@ -34,28 +26,4 @@ export function hexDataSlice(
   }
 
   return "0x" + data.substring(offset);
-}
-
-export async function sendTransaction(
-  chainInfo: IChainInfo,
-  from: string,
-  to: string,
-  value: BigNumberish,
-  data: string,
-  signer: Signer
-): Promise<TransactionResponse> {
-  const nonce: number = await requestWeb3(chainInfo, {
-    method: "getTransactionCount",
-    address: from,
-    blockTag: "",
-  });
-  const result = await signer.sendTransaction({
-    from,
-    to,
-    value,
-    data,
-    nonce,
-  });
-  await result.wait();
-  return result;
 }

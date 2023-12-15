@@ -6,25 +6,22 @@ import Orbiter from "../orbiter";
 describe.only("bridge tests", () => {
   // add your private key to the environment to be able to run the tests
   const PRIVATE_KEY = process.env.PRIVATE_KEY;
+  const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
 
   let signer: Signer;
   let orbiter: Orbiter;
   let provider: Provider;
 
   beforeAll(async () => {
-    if (!PRIVATE_KEY)
+    if (!PRIVATE_KEY || !GOERLI_RPC_URL)
       throw new Error(
         "private key can not be empty, pls add your private to the environment to be able to run the tests"
       );
     orbiter = new Orbiter();
-    // const goerliRpcs = await orbiter.getChainInfoAsync(5);
-    const goerliProvider = new ethers.JsonRpcProvider(
-      "https://goerli.infura.io/v3/e41edd236d664caabcc0b486e4912069"
-    );
-    // const goerliProvider = new ethers.JsonRpcProvider(goerliRpcs?.rpc?.[0]);
+    const goerliProvider = new ethers.JsonRpcProvider(GOERLI_RPC_URL);
     provider = goerliProvider;
     signer = new Wallet(PRIVATE_KEY, goerliProvider);
-    orbiter.updateSigner(signer);
+    orbiter.updateConfig({ signer });
   });
 
   test("get all history test", async () => {
@@ -39,20 +36,17 @@ describe.only("bridge tests", () => {
   test("searchTransaction test", async () => {
     const goerliToStarknetGoerliHash =
       "0x3638d76871d33e31b4beb2b2b22279df7a8e683cc3eb7ac172787db1cebb23b5";
-    const result = await orbiter.searchTransaction(
-      goerliToStarknetGoerliHash,
-      5
-    );
+    const result = await orbiter.searchTransaction(goerliToStarknetGoerliHash);
+
     expect(result).toBeDefined();
-    expect(result?.fromHash).is.string;
+    expect(result?.sourceId).is.string;
   });
 
   test.only("searchTransaction is not found test", async () => {
     const goerliToStarknetGoerliHash = `0x${"3".repeat(64)}`;
-    const result = await orbiter.searchTransaction(
-      goerliToStarknetGoerliHash,
-      5
-    );
-    expect(result).toBeUndefined();
+
+    const result = await orbiter.searchTransaction(goerliToStarknetGoerliHash);
+
+    expect(result && Object.keys(result).length).eq(0);
   });
 });

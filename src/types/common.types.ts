@@ -1,8 +1,10 @@
 import { Signer } from "ethers-6";
 import { HexString } from "ethers-6/lib.commonjs/utils/data";
+import { Account } from "starknet";
 
 export interface IOBridgeConfig {
-  signer: Signer;
+  signer: Signer | Account;
+  dealerId: string | HexString;
 }
 
 export interface Rates {
@@ -36,29 +38,22 @@ export interface IChainInfo {
   networkId: string | number;
   internalId: string | number;
   name: string;
+  targetConfirmation?: number;
+  batchLimit?: number;
+  bridge?: number;
 
-  api?: {
-    url: string;
-    key: string;
-    intervalTime?: number;
+  contracts?: string[];
+  contract?: {
+    [k: string]: string;
   };
+
   nativeCurrency: {
+    id: number;
     name: string;
     symbol: string;
     decimals: number;
     address: string;
   };
-  rpc?: string[];
-  watch?: string[];
-  alchemyApi?: {
-    category: string[];
-  };
-  contracts?: string[];
-  contract?: {
-    [k: string]: string;
-  };
-  tokens: IToken[] | [];
-  xvmList: string[];
   infoURL?: string;
 }
 
@@ -83,23 +78,6 @@ export interface ITxList {
   symbol: string;
   timestamp: string;
   value: string;
-}
-
-export interface ISearchTxData {
-  fromHash: string;
-  fromChainId: string;
-  fromTime: string;
-  fromAmount: string;
-  fromSymbol: string;
-  fromTimeStampShow: string;
-  fromAmountValue: string;
-  toHash: string;
-  toChainId: string;
-  toTime: string;
-  toAmount: string;
-  toSymbol: string;
-  toTimeStampShow: string;
-  toAmountValue: string;
 }
 
 export interface IQueryChainInfosData {
@@ -138,34 +116,21 @@ export interface ITokensByChain {
 }
 
 export interface ICrossRule {
-  slippage?: string;
-  fromChain: {
-    chainId: string;
-    decimals: number;
-    id: string;
-    maxPrice: number;
-    minPrice: number;
-    name: string;
-    networkId: string;
-    symbol: string;
-    tokenAddress: string;
-  };
-  gasFee: string;
-  pairId: string;
-  dealerId?: string;
-  ebcId?: string;
-  recipient: string;
-  sender: string;
-  toChain: {
-    chainId: string;
-    decimals: number;
-    id: string;
-    name: string;
-    networkId: string;
-    symbol: string;
-    tokenAddress: string;
-  };
-  tradingFee: string;
+  line: string;
+  endpoint: string;
+  endpointContract?: string;
+  srcChain: string;
+  tgtChain: string;
+  srcToken: string;
+  tgtToken: string;
+  maxAmt: string;
+  minAmt: string;
+  tradeFee: string;
+  withholdingFee: string;
+  vc: string;
+  state: string;
+  compRatio: number;
+  spentTime: number;
 }
 
 export interface ICrossFunctionParams {
@@ -185,7 +150,11 @@ export type TCrossConfig = ICrossFunctionParams & {
   account: string;
   tokenAddress: string;
   isETH: boolean;
+  fromTokenInfo: IToken;
+  tradeFee: string;
+  toTokenInfo: IToken;
   to: string;
+  fromChainTokens: IToken[];
   tValue: {
     state: boolean;
     tAmount: BigInt;
@@ -193,3 +162,38 @@ export type TCrossConfig = ICrossFunctionParams & {
 };
 
 export const starknetChainId = ["SN_MAIN", "SN_GOERLI"];
+
+export enum StarknetChainId {
+  SN_MAIN = "0x534e5f4d41494e",
+  SN_GOERLI = "0x534e5f474f45524c49",
+  SN_GOERLI2 = "0x534e5f474f45524c4932",
+}
+export interface IRates {
+  [k: string]: string;
+}
+
+export interface IToken {
+  name: string;
+  symbol: string;
+  decimals: number;
+  address: string;
+}
+
+export interface ISearchTxResponse {
+  sourceId: string;
+  targetId: string;
+  sourceChain: string;
+  targetChain: string;
+  sourceAmount: string;
+  targetAmount: string;
+  sourceMaker: string;
+  targetMaker: string;
+  sourceAddress: string;
+  targetAddress: string;
+  sourceSymbol: string;
+  targetSymbol: string;
+  status: number;
+  sourceTime: string;
+  targetTime: string;
+  ruleId: string;
+}

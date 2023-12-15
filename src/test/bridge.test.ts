@@ -9,6 +9,10 @@ describe("orbiter tests", () => {
   const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
   const STARKNET_PRIVATE_KEY = process.env.STARKNET_PRIVATE_KEY || "";
   const STARKNET_ADDRESS = process.env.STARKNET_ADDRESS || "";
+  // rpcs
+  const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
+  const OP_GOERLI_RPC_URL = process.env.OP_GOERLI_RPC_URL;
+  const SN_GOERLI_RPC_URL = process.env.SN_GOERLI_RPC_URL;
 
   let signer: Signer;
   let orbiter: Orbiter;
@@ -21,14 +25,10 @@ describe("orbiter tests", () => {
         "private key can not be empty, pls add your private to the environment to be able to run the tests"
       );
     orbiter = new Orbiter();
-    // const goerliRpcs = await orbiter.getChainInfoAsync(5);
-    const goerliProvider = new ethers.JsonRpcProvider(
-      "https://goerli.infura.io/v3/e41edd236d664caabcc0b486e4912069"
-    );
-    // const goerliProvider = new ethers.JsonRpcProvider(goerliRpcs?.rpc?.[0]);
+    const goerliProvider = new ethers.JsonRpcProvider(GOERLI_RPC_URL);
     provider = goerliProvider;
     signer = new Wallet(PRIVATE_KEY, goerliProvider);
-    orbiter.updateSigner(signer);
+    orbiter.updateConfig({ signer });
     owner = await signer.getAddress();
   });
 
@@ -123,14 +123,13 @@ describe("orbiter tests", () => {
   // });
 
   // test("starknet ETH cross to goerli test", async () => {
-  //   const starknetInfo = await orbiter.getChainInfoAsync("SN_GOERLI");
-  //   const provider = new snProvider({ nodeUrl: starknetInfo?.rpc?.[0] || "" });
+  //   const provider = new snProvider({ nodeUrl: SN_GOERLI_RPC_URL || "" });
   //   const account = new Account(
   //     provider,
   //     STARKNET_ADDRESS,
   //     STARKNET_PRIVATE_KEY
   //   );
-  //   orbiter.updateSigner(account);
+  //   orbiter.updateConfig({ signer: account});
 
   //   let result = null;
   //   try {
@@ -185,15 +184,14 @@ describe("orbiter tests", () => {
       console.log(error.message);
     }
     console.log(result);
-    expect(result).toBeDefined;
+    expect(result).toBeDefined();
   });
 
   test("evm erc20 cross test", async () => {
-    const opRpcs = await orbiter.getChainInfoAsync(420);
-    const opProvider = new ethers.JsonRpcProvider(opRpcs?.rpc?.[0]);
+    const opProvider = new ethers.JsonRpcProvider(OP_GOERLI_RPC_URL);
     provider = opProvider;
     const opSigner = signer.connect(provider);
-    orbiter.updateSigner(opSigner);
+    orbiter.updateConfig({ signer: opSigner });
     const evmCrossConfig = {
       fromChainID: "420",
       fromCurrency: "USDC",
@@ -211,12 +209,11 @@ describe("orbiter tests", () => {
     expect(result.hash).toBeDefined;
   });
 
-  test.only("evm signer is not match with the source chain test", async () => {
-    const opRpcs = await orbiter.getChainInfoAsync(420);
-    const opProvider = new ethers.JsonRpcProvider(opRpcs?.rpc?.[0]);
+  test("evm signer is not match with the source chain test", async () => {
+    const opProvider = new ethers.JsonRpcProvider(OP_GOERLI_RPC_URL);
     provider = opProvider;
     const opSigner = signer.connect(provider);
-    orbiter.updateSigner(opSigner);
+    orbiter.updateConfig({ signer: opSigner });
     const evmCrossConfig = {
       fromChainID: "5",
       fromCurrency: "USDC",
@@ -228,22 +225,20 @@ describe("orbiter tests", () => {
     try {
       result = await orbiter.toBridge(evmCrossConfig);
     } catch (error: any) {
-      console.log(error.message);
       expect(error.message).eq(
         "evm signer is not match with the source chain."
       );
     }
   });
 
-  test.only("starknet account is not match with the source chain test", async () => {
-    const starknetInfo = await orbiter.getChainInfoAsync("SN_GOERLI");
-    const provider = new snProvider({ nodeUrl: starknetInfo?.rpc?.[0] || "" });
+  test("starknet account is not match with the source chain test", async () => {
+    const provider = new snProvider({ nodeUrl: SN_GOERLI_RPC_URL || "" });
     const account = new Account(
       provider,
       STARKNET_ADDRESS,
       STARKNET_PRIVATE_KEY
     );
-    orbiter.updateSigner(account);
+    orbiter.updateConfig({ signer: account });
     const evmCrossConfig = {
       fromChainID: "5",
       fromCurrency: "USDC",

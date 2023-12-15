@@ -1,5 +1,4 @@
 import {
-  IChainInfo,
   IToken,
   ITokensByChain,
   TAddress,
@@ -7,18 +6,16 @@ import {
   TTokenName,
 } from "../types";
 import { throwNewError } from "../utils";
-import ChainsService from "./ChainsService";
+import { queryTokens } from "./ApiService";
 import { isArray } from "lodash";
 
 export default class TokenService {
   private static instance: TokenService;
-  private tokensByChain: ITokensByChain = {};
-  private chainsService: ChainsService;
+  private tokens: ITokensByChain = {};
   private readonly loadingPromise: Promise<void>;
 
   constructor() {
-    this.chainsService = ChainsService.getInstance();
-    this.loadingPromise = this.loadTokensByChain();
+    this.loadingPromise = this.loadTokens();
   }
 
   public static getInstance(): TokenService {
@@ -29,10 +26,9 @@ export default class TokenService {
     return this.instance;
   }
 
-  private async loadTokensByChain() {
+  private async loadTokens() {
     try {
-      const res = (await this.chainsService.getChainsAsync()) || [];
-      this.tokensByChain = this.getAllChainTokensAsync(res);
+      this.tokens = (await queryTokens()) || {};
     } catch (error) {
       throwNewError("TokenService init failed.");
     }
@@ -42,28 +38,19 @@ export default class TokenService {
     if (this.loadingPromise) {
       await this.loadingPromise;
     }
-    if (!this.tokensByChain.length) {
-      this.loadTokensByChain();
+    if (!this.tokens.length) {
+      this.loadTokens();
     }
-  }
-
-  private getAllChainTokensAsync(chains: IChainInfo[]): ITokensByChain {
-    if (!chains.length) return {};
-    const chainTokens: ITokensByChain = {};
-    chains.forEach((item) => {
-      chainTokens[item.chainId] = item.tokens;
-    });
-    return chainTokens;
   }
 
   public async getTokensByChainAsync() {
     await this.checkLoading();
-    return this.tokensByChain;
+    return this.tokens;
   }
 
   public async getTokensByChainIdAsync(chainId: string | number) {
     await this.checkLoading();
-    return this.tokensByChain[String(chainId)] || [];
+    return this.tokens[String(chainId)] || [];
   }
 
   public async getTokensDecimals(
@@ -75,12 +62,16 @@ export default class TokenService {
       | Array<TTokenName | TAddress | TSymbol>
   ) {
     await this.checkLoading();
-    const targetChainTokensInfo = this.tokensByChain[String(chainId)] || [];
+    const targetChainTokensInfo = this.tokens[String(chainId)] || [];
     if (!targetChainTokensInfo.length) return void 0;
     const findDecimals = (token: TTokenName | TAddress | TSymbol) => {
       return (
         targetChainTokensInfo.find((item: IToken) => {
-          return item.name === token || item.symbol === token || item.address;
+          return (
+            item.name === token ||
+            item.symbol === token ||
+            item.address === token
+          );
         })?.decimals || void 0
       );
     };

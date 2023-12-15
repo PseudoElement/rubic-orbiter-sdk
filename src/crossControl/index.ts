@@ -32,6 +32,7 @@ import {
 } from "./starknet_helper";
 import { Account } from "starknet";
 import { OrbiterRouterType, orbiterRouterTransfer } from "./orbiterRouter";
+import TokenService from "../services/TokenService";
 
 export default class CrossControl {
   private static instance: CrossControl;
@@ -64,9 +65,28 @@ export default class CrossControl {
       toChainInfo,
       transferValue,
     } = crossParams;
-    const tokenAddress = selectMakerConfig?.fromChain?.tokenAddress;
-    const to = selectMakerConfig?.recipient;
-    const isETH = isEthTokenAddress(tokenAddress, fromChainInfo);
+    const tokenAddress = selectMakerConfig.srcToken;
+    const to = selectMakerConfig.endpoint;
+    const fromChainTokens =
+      await TokenService.getInstance().getTokensByChainIdAsync(fromChainID);
+    const toChainTokens =
+      await TokenService.getInstance().getTokensByChainIdAsync(toChainID);
+    const fromTokenInfo = fromChainTokens.find(
+      (item) => item.address === selectMakerConfig.srcToken
+    );
+    const toTokenInfo = toChainTokens.find(
+      (item) => item.address === selectMakerConfig.tgtToken
+    );
+    if (!fromTokenInfo || !toTokenInfo)
+      return throwNewError("fromToken or toToken is empty.");
+    const isETH = isEthTokenAddress(
+      tokenAddress,
+      fromChainInfo,
+      fromChainTokens
+    );
+    const tradeFee = (
+      BigInt(selectMakerConfig!.tradeFee) / 1000000n
+    ).toString();
     try {
       const tValue = getTransferValue({
         fromChainInfo,
@@ -74,8 +94,7 @@ export default class CrossControl {
         toChainID,
         fromChainID,
         transferValue,
-        tradingFee: selectMakerConfig!.tradingFee,
-        decimals: selectMakerConfig!.fromChain.decimals,
+        decimals: fromTokenInfo.decimals,
         selectMakerConfig,
       });
 
@@ -84,7 +103,11 @@ export default class CrossControl {
         ...crossParams,
         tokenAddress,
         isETH,
+        fromChainTokens,
+        fromTokenInfo,
+        toTokenInfo,
         to,
+        tradeFee,
         tValue,
         account: signer?.getAddress
           ? await signer?.getAddress()
@@ -150,20 +173,26 @@ export default class CrossControl {
 
   private async xvmTransfer(): Promise<any> {
     const {
-      fromChainID,
       fromChainInfo,
       crossAddressReceipt,
       transferValue,
       selectMakerConfig,
       account,
       isETH,
+      fromTokenInfo,
+      toTokenInfo,
+      tradeFee,
     } = this.crossConfig;
 
-    const amount = getRealTransferValue(selectMakerConfig, transferValue);
+    const amount = getRealTransferValue(
+      selectMakerConfig,
+      transferValue,
+      fromTokenInfo.decimals
+    );
     const contractAddress =
       fromChainInfo.contract &&
       getContractAddressByType(fromChainInfo.contract, CONTRACT_TYPE_ROUTER_V3);
-    const tokenAddress = selectMakerConfig.fromChain.tokenAddress;
+    const tokenAddress = selectMakerConfig.srcToken;
     if (!contractAddress || !tokenAddress)
       return throwNewError(
         "xvmTransfer error [contractAddress or tokenAddress] is empty."
@@ -178,7 +207,7 @@ export default class CrossControl {
     }
     try {
       const type =
-        selectMakerConfig.fromChain.symbol === selectMakerConfig.toChain.symbol
+        fromTokenInfo.symbol === toTokenInfo.symbol
           ? OrbiterRouterType.CrossAddress
           : OrbiterRouterType.CrossAddressCurrency;
       return await orbiterRouterTransfer({
@@ -189,6 +218,10 @@ export default class CrossControl {
         fromChainInfo,
         toWalletAddress: crossAddressReceipt ?? account,
         selectMakerConfig,
+        isETH,
+        fromTokenInfo,
+        toTokenInfo,
+        tradeFee,
       });
     } catch (error) {
       return throwNewError("XVM transfer error", error);
@@ -208,7 +241,7 @@ export default class CrossControl {
     } = this.crossConfig;
     let gasLimit = await this.signer.estimateGas({
       from: account,
-      to: selectMakerConfig?.recipient,
+      to: selectMakerConfig.endpoint,
       value: tValue?.tAmount,
     });
     if (Number(fromChainID) === 2 && gasLimit < 21000) {
@@ -217,7 +250,7 @@ export default class CrossControl {
     if (isETH) {
       const tx = await this.signer.sendTransaction({
         from: account,
-        to: selectMakerConfig?.recipient,
+        to: selectMakerConfig.endpoint,
         value: tValue?.tAmount,
         gasLimit,
       });
@@ -237,10 +270,17 @@ export default class CrossControl {
         gasLimit =
           String(fromChainID) === "42161" && gasLimit < 21000
             ? 21000
-            : await transferContract.transfer.estimateGas(to, tValue?.tAmount);
-        return await transferContract.transfer(to, tValue?.tAmount, {
-          gasLimit,
-        });
+            : await transferContract.transfer.estimateGas(
+                selectMakerConfig.endpoint,
+                tValue?.tAmount
+              );
+        return await transferContract.transfer(
+          selectMakerConfig.endpoint,
+          tValue?.tAmount,
+          {
+            gasLimit,
+          }
+        );
       } catch (error) {
         console.log(error);
         return throwNewError("evm transfer error", error);
@@ -249,13 +289,15 @@ export default class CrossControl {
   }
   private async zkTransfer() {
     const { selectMakerConfig, fromChainID, tValue } = this.crossConfig;
-    const tokenAddress = selectMakerConfig.fromChain.tokenAddress;
+    const tokenAddress = selectMakerConfig.srcToken;
     const syncProvider = await getZkSyncProvider(fromChainID);
     // @ts-ignore
     const syncWallet = await Wallet.fromEthSigner(this.signer, syncProvider);
     if (!syncWallet.signer)
       return throwNewError("zksync get sync wallet signer error.");
-    const amount = utils.closestPackableTransactionAmount(tValue.tAmount);
+    const amount = utils.closestPackableTransactionAmount(
+      tValue.tAmount.toString()
+    );
     const transferFee = await syncProvider.getTransactionFee(
       "Transfer",
       syncWallet.address() || "",
@@ -313,7 +355,7 @@ export default class CrossControl {
         alreadySigned: true,
       });
       batchBuilder.addTransfer({
-        to: selectMakerConfig.recipient,
+        to: selectMakerConfig.endpoint,
         token: tokenAddress,
         amount,
         fee: transferFee.totalFee,
@@ -335,7 +377,7 @@ export default class CrossControl {
     } else {
       try {
         return await syncWallet.syncTransfer({
-          to: selectMakerConfig.recipient,
+          to: selectMakerConfig.endpoint,
           token: tokenAddress,
           amount,
         });
@@ -368,7 +410,7 @@ export default class CrossControl {
         account,
         fromChainID,
         fromChainInfo,
-        selectMakerConfig.recipient,
+        selectMakerConfig.endpoint,
         tokenAddress,
         amount,
         memo
@@ -403,17 +445,17 @@ export default class CrossControl {
     }
     if (!crossAddressReceipt)
       return throwNewError("crossAddressReceipt can not be empty.");
-    if (selectMakerConfig.recipient.length < 60) {
+    if (selectMakerConfig.endpoint.length < 60) {
       return;
     }
     try {
-      const contractAddress = selectMakerConfig.fromChain.tokenAddress;
+      const contractAddress = selectMakerConfig.srcToken;
       return await sendTransfer(
         this.signer,
         crossAddressReceipt,
         contractAddress,
-        selectMakerConfig.recipient,
-        new BigNumber(tValue.tAmount),
+        selectMakerConfig.endpoint,
+        new BigNumber(tValue.tAmount.toString()),
         fromChainInfo
       );
     } catch (error) {
@@ -424,13 +466,14 @@ export default class CrossControl {
   private async transferToStarkNet() {
     const {
       selectMakerConfig,
-      fromChainID,
       tValue,
       crossAddressReceipt,
       fromChainInfo,
       isETH,
-      account,
       transferValue,
+      fromTokenInfo,
+      toTokenInfo,
+      tradeFee,
     } = this.crossConfig;
     if (
       !crossAddressReceipt ||
@@ -459,6 +502,10 @@ export default class CrossControl {
         fromChainInfo,
         toWalletAddress: crossAddressReceipt,
         selectMakerConfig,
+        isETH,
+        fromTokenInfo,
+        toTokenInfo,
+        tradeFee,
       });
     } catch (err) {
       return throwNewError("transfer to starknet error", err);
@@ -469,12 +516,12 @@ export default class CrossControl {
       selectMakerConfig,
       fromChainID,
       account,
-      fromChainInfo,
       tValue,
       isETH,
+      fromTokenInfo,
     } = this.crossConfig;
     try {
-      const contractAddress = selectMakerConfig.fromChain.tokenAddress;
+      const contractAddress = selectMakerConfig.srcToken;
 
       const imxHelper = new IMXHelper(fromChainID);
       const imxClient = await imxHelper.getImmutableXClient(
@@ -493,15 +540,15 @@ export default class CrossControl {
       } = {
         type: ETHTokenType.ETH,
         data: {
-          decimals: selectMakerConfig.fromChain.decimals,
+          decimals: fromTokenInfo.decimals,
         },
       };
       if (!isETH) {
         tokenInfo = {
           type: ERC20TokenType.ERC20,
           data: {
-            symbol: selectMakerConfig.fromChain.symbol,
-            decimals: selectMakerConfig.fromChain.decimals,
+            symbol: fromTokenInfo.symbol,
+            decimals: fromTokenInfo.decimals,
             tokenAddress: contractAddress,
           },
         };
@@ -509,8 +556,8 @@ export default class CrossControl {
       return await imxClient.transfer({
         sender: account,
         token: tokenInfo,
-        quantity: ethers.BigNumber.from(tValue.tAmount),
-        receiver: selectMakerConfig.recipient,
+        quantity: ethers.BigNumber.from(tValue.tAmount.toString()),
+        receiver: selectMakerConfig.endpoint,
       });
     } catch (error: any) {
       throwNewError("Imx transfer error", error);

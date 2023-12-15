@@ -1,21 +1,24 @@
-import { queryTradingPairs } from "./ApiService";
+import { queryRouters } from "./ApiService";
 import { IChainInfo, ICrossRule } from "../types";
 import { throwNewError } from "../utils";
+import { HexString } from "ethers-6/lib.commonjs/utils/data";
 
 export default class CrossRulesService {
   private static instance: CrossRulesService;
+  private dealerId: string | HexString;
   private readonly loadingPromise: Promise<void>;
   private crossRules: ICrossRule[] = [];
 
-  constructor() {
-    this.loadingPromise = this.loadAvailableCrossRules();
+  constructor(dealerId?: string | HexString) {
+    this.dealerId = dealerId || "";
+    this.loadingPromise = this.loadRoutersRule();
   }
 
-  private async loadAvailableCrossRules(): Promise<void> {
+  private async loadRoutersRule(): Promise<void> {
     try {
-      this.crossRules = (await queryTradingPairs()).ruleList;
-    } catch (error) {
-      throwNewError("crossRules init failed.");
+      this.crossRules = await queryRouters(this.dealerId);
+    } catch (error: any) {
+      throwNewError("crossRules init failed.", error.message);
     }
   }
 
@@ -24,8 +27,13 @@ export default class CrossRulesService {
       await this.loadingPromise;
     }
     if (!this.crossRules.length) {
-      await this.loadAvailableCrossRules();
+      await this.loadRoutersRule();
     }
+  }
+
+  public updateDealerId(dealerId: string | HexString) {
+    this.dealerId = dealerId;
+    this.crossRules = [];
   }
 
   public static getInstance(): CrossRulesService {
@@ -36,13 +44,14 @@ export default class CrossRulesService {
     return this.instance;
   }
 
-  public async getRulesAsync(): Promise<ICrossRule[]> {
+  public async queryRulesAsync(): Promise<ICrossRule[]> {
     await this.checkLoading();
 
     return this.crossRules;
   }
 
-  public async getRuleByPairId(pairInfo: {
+  public async queryRouterRule(pairInfo: {
+    dealerId: string | HexString;
     fromChainInfo: IChainInfo;
     toChainInfo: IChainInfo;
     fromCurrency: string;
@@ -53,10 +62,10 @@ export default class CrossRulesService {
     const { fromChainInfo, toChainInfo, fromCurrency, toCurrency } = pairInfo;
     if (!fromChainInfo || !toChainInfo || !fromCurrency || !toCurrency)
       return {} as ICrossRule;
-    const filterPairId = `${fromChainInfo.chainId}-${toChainInfo.chainId}:${fromCurrency}-${toCurrency}`;
+    const filterPairId = `${fromChainInfo.chainId}/${toChainInfo.chainId}-${fromCurrency}/${toCurrency}`;
     const targetRule =
       this.crossRules.find((item) => {
-        return item.pairId === filterPairId;
+        return item.line === filterPairId;
       }) || ({} as ICrossRule);
     return targetRule;
   }

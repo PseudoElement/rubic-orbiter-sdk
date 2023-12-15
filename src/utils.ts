@@ -1,16 +1,6 @@
-import {
-  AbiCoder,
-  AbstractProvider,
-  AddressLike,
-  BigNumberish,
-  PerformActionRequest,
-  Provider,
-  Signer,
-  Contract,
-  ethers,
-} from "ethers-6";
+import { Signer, Contract, ethers } from "ethers-6";
 import { Coin_ABI } from "./constant/common";
-import { IChainInfo, ICrossRule } from "./types";
+import { IChainInfo, ICrossRule, IToken } from "./types";
 import BigNumber from "bignumber.js";
 import { queryRatesByCurrency } from "./services/ApiService";
 
@@ -49,86 +39,6 @@ export function equalsIgnoreCase(value1: string, value2: string): boolean {
   }
   return value1.toUpperCase() === value2.toUpperCase();
 }
-export async function getRpcList(chainInfo: IChainInfo) {
-  const rpcList = (chainInfo?.rpc || []).sort(function () {
-    return 0.5 - Math.random();
-  });
-  return rpcList;
-}
-
-export async function translatePerform(
-  provider: AbstractProvider,
-  req: PerformActionRequest
-): Promise<any> {
-  switch (req.method) {
-    case "broadcastTransaction":
-      return await provider.broadcastTransaction(req.signedTransaction);
-    case "call":
-      return await provider.call(
-        Object.assign({}, req.transaction, { blockTag: req.blockTag })
-      );
-    case "chainId":
-      return (await provider.getNetwork()).chainId;
-    case "estimateGas":
-      return await provider.estimateGas(req.transaction);
-    case "getBalance":
-      return await provider.getBalance(req.address, req.blockTag);
-    case "getBlock": {
-      const block = "blockHash" in req ? req.blockHash : req.blockTag;
-      return await provider.getBlock(block, req.includeTransactions);
-    }
-    case "getBlockNumber":
-      return await provider.getBlockNumber();
-    case "getCode":
-      return await provider.getCode(req.address, req.blockTag);
-    case "getGasPrice":
-      return (await provider.getFeeData()).gasPrice;
-    case "getLogs":
-      return await provider.getLogs(req.filter);
-    case "getStorage":
-      return await provider.getStorage(req.address, req.position, req.blockTag);
-    case "getTransaction":
-      return await provider.getTransaction(req.hash);
-    case "getTransactionCount":
-      return await provider.getTransactionCount(req.address, req?.blockTag);
-    case "getTransactionReceipt":
-      return await provider.getTransactionReceipt(req.hash);
-    case "getTransactionResult":
-      return await provider.getTransactionResult(req.hash);
-  }
-}
-
-export async function requestWeb3(
-  chainInfo: IChainInfo,
-  params: PerformActionRequest
-): Promise<any> {
-  const rpcList = await getRpcList(chainInfo);
-  return new Promise(async (resolve, reject) => {
-    let result;
-    if (rpcList && rpcList.length > 0) {
-      for (const url of rpcList) {
-        if (!url || url === "") {
-          continue;
-        }
-        try {
-          const provider = new ethers.AbstractProvider(url);
-          result = await translatePerform(provider, params);
-          resolve(result);
-          break;
-        } catch (error) {
-          throwNewError("request rpc error:", error);
-        }
-      }
-    }
-    if (!result) {
-      reject(
-        `Reuqest RPC ERROR：${chainInfo.chainId}-${
-          params.method
-        }-${JSON.stringify(params)}`
-      );
-    }
-  });
-}
 
 export function getContract(params: {
   contractAddress: string;
@@ -146,67 +56,28 @@ export function getContract(params: {
   return new ethers.Contract(contractAddress, ABI ? ABI : Coin_ABI, signer);
 }
 
-export function isEthTokenAddress(tokenAddress: string, chainInfo: IChainInfo) {
+export function isEthTokenAddress(
+  tokenAddress: string,
+  chainInfo: IChainInfo,
+  tokens: IToken[]
+) {
   if (chainInfo) {
     // main coin
     if (equalsIgnoreCase(chainInfo.nativeCurrency?.address, tokenAddress)) {
       return true;
     }
     // ERC20
-    if (
-      chainInfo.tokens.find((item) =>
-        equalsIgnoreCase(item.address, tokenAddress)
-      )
-    ) {
+    if (tokens.find((item) => equalsIgnoreCase(item.address, tokenAddress))) {
       return false;
     }
   }
   return /^0x0+$/i.test(tokenAddress);
 }
 
-export async function getTransferGasLimit(
-  signer: Signer,
-  selectMakerConfig: ICrossRule,
-  from: AddressLike,
-  to: AddressLike,
-  chainInfo: IChainInfo,
-  value: number | string | BigNumberish
-) {
-  const tokenAddress = selectMakerConfig?.fromChain?.tokenAddress;
-  let gasLimit = 55000n;
-  try {
-    if (isEthTokenAddress(tokenAddress, chainInfo)) {
-      gasLimit = await signer.estimateGas({
-        from,
-        to: selectMakerConfig?.recipient,
-        value,
-      });
-      return gasLimit;
-    } else {
-      const ecourseContractInstance = getContract({
-        contractAddress: tokenAddress,
-        signer,
-      });
-      if (!ecourseContractInstance) {
-        return gasLimit;
-      }
-      gasLimit = await ecourseContractInstance.estimateGas({
-        to,
-        value,
-        from,
-      });
-      return gasLimit;
-    }
-  } catch (err) {
-    throwNewError("get transfer gasLimit error", err);
-  }
-
-  return gasLimit;
-}
-
 export function getRealTransferValue(
   selectMakerConfig: ICrossRule,
-  transferValue: number | string
+  transferValue: number | string,
+  fromTokenDecimals: number
 ): BigInt {
   if (!Object.keys(selectMakerConfig).length) {
     throw new Error(
@@ -215,8 +86,8 @@ export function getRealTransferValue(
   }
   return BigInt(
     new BigNumber(transferValue)
-      .plus(new BigNumber(selectMakerConfig.tradingFee))
-      .multipliedBy(new BigNumber(10 ** selectMakerConfig.fromChain.decimals))
+      .plus(new BigNumber(selectMakerConfig.withholdingFee))
+      .multipliedBy(new BigNumber(10 ** fromTokenDecimals))
       .toFixed()
   );
 }
@@ -314,18 +185,6 @@ export const getContractAddressByType = (
     }
   }
   return targetContract;
-};
-
-export const getChainTokenList = (chainInfo: IChainInfo) => {
-  const allTokenList = [];
-  if (!chainInfo) return [];
-  if (chainInfo.tokens && chainInfo.tokens.length) {
-    allTokenList.push(...chainInfo.tokens);
-  }
-  if (chainInfo.nativeCurrency) {
-    allTokenList.push(chainInfo.nativeCurrency);
-  }
-  return allTokenList;
 };
 
 export const formatDate = (date: Date | string, isShort?: boolean): string => {

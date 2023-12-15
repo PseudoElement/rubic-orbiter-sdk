@@ -30,11 +30,7 @@ export class CrossAddress {
     fromChainInfo: IChainInfo,
     contractAddress?: string
   ) {
-    this.contractAddress =
-      contractAddress ||
-      (fromChainInfo?.xvmList && fromChainInfo.xvmList.length
-        ? fromChainInfo.xvmList[0]
-        : "");
+    this.contractAddress = contractAddress || "";
     if (!this.contractAddress) {
       throwNewError(
         "CrossAddress class init error: Sorry, miss param [contractAddress]"

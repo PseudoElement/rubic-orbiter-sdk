@@ -1,4 +1,4 @@
-import { queryTradingPairs } from "./ApiService";
+import { queryChains } from "./ApiService";
 import { IChainInfo } from "../types";
 import { throwNewError } from "../utils";
 
@@ -13,7 +13,7 @@ export default class ChainsService {
 
   private async loadAvailableChains(): Promise<void> {
     try {
-      this.chains = (await queryTradingPairs()).chainList;
+      this.chains = await queryChains();
     } catch (error) {
       throwNewError("chainsService init failed.");
     }
@@ -44,15 +44,11 @@ export default class ChainsService {
     const chainInfo = this.chains.find(
       (chainItem) =>
         chainItem.chainId === currentChain ||
-        chainItem.internalId === currentChain
+        chainItem.internalId === currentChain ||
+        chainItem.networkId === currentChain
     );
-    if (!chainInfo) {
-      throw new Error(
-        `getChainInfoAsync: Unknown chain passed: ${currentChain}.`
-      );
-    }
 
-    return chainInfo;
+    return chainInfo ?? ({} as IChainInfo);
   }
 
   public async getChainsAsync(): Promise<IChainInfo[]> {

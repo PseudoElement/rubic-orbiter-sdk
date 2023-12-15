@@ -3,13 +3,12 @@ import { Coin_ABI, ORBITER_ROUTER_V3_ABI } from "../constant/abi";
 import RLP from "rlp";
 import { Signer, Contract } from "ethers-6";
 import {
-  isEthTokenAddress,
   throwNewError,
   getContractAddressByType,
   approveAndAllowanceCheck,
 } from "../utils";
 import { getExpectValue } from "../orbiter/utils";
-import { IChainInfo, ICrossRule } from "../types";
+import { IChainInfo, ICrossRule, IToken } from "../types";
 import { CONTRACT_TYPE_ROUTER_V3 } from "../constant/common";
 
 // 0x01: cross address
@@ -27,6 +26,10 @@ export async function orbiterRouterTransfer(params: {
   toWalletAddress?: string;
   selectMakerConfig: ICrossRule;
   transferValue: string | number;
+  isETH: boolean;
+  fromTokenInfo: IToken;
+  toTokenInfo: IToken;
+  tradeFee: string;
 }) {
   const {
     type,
@@ -36,18 +39,19 @@ export async function orbiterRouterTransfer(params: {
     fromChainInfo,
     transferValue,
     signer,
+    isETH,
+    fromTokenInfo,
+    toTokenInfo,
+    tradeFee,
   } = params;
 
   const fromAddress = await signer.getAddress();
   const fromChainID = String(fromChainInfo.chainId);
-  const makerAddress = selectMakerConfig.recipient;
-  const { fromChain, toChain } = selectMakerConfig;
-  const t1Address = fromChain.tokenAddress;
-  const fromCurrency = fromChain.symbol;
-  const toCurrency = toChain.symbol;
-  const toChainId = toChain.id;
-  const t2Address = toChain.tokenAddress;
-  const slippage = selectMakerConfig.slippage;
+  const makerAddress = selectMakerConfig.endpoint;
+  const t1Address = selectMakerConfig.srcToken;
+  const toChainId = selectMakerConfig.tgtChain;
+  const t2Address = selectMakerConfig.tgtToken;
+  const slippage = "200";
 
   if (!slippage) return throwNewError("xvm transfer slippage is empty.");
   if (!toWalletAddress)
@@ -56,8 +60,9 @@ export async function orbiterRouterTransfer(params: {
   const expectValue = await getExpectValue(
     selectMakerConfig,
     transferValue,
-    fromCurrency,
-    toCurrency
+    fromTokenInfo,
+    toTokenInfo,
+    tradeFee
   );
   const web3 = new Web3();
   let sourceData: string[] = [];
@@ -97,7 +102,8 @@ export async function orbiterRouterTransfer(params: {
     fromChainInfo,
     t1Address,
     data,
-    value
+    value,
+    isETH
   );
 }
 
@@ -109,7 +115,8 @@ async function orbiterRouterSend(
   fromChainInfo: IChainInfo,
   tokenAddress: string,
   data: Buffer,
-  value: BigInt
+  value: BigInt,
+  isETH: boolean
 ) {
   const contractAddress =
     fromChainInfo.contract &&
@@ -122,7 +129,7 @@ async function orbiterRouterSend(
     ORBITER_ROUTER_V3_ABI,
     signer
   );
-  if (isEthTokenAddress(tokenAddress, fromChainInfo)) {
+  if (isETH) {
     return contractInstance.transfer(toAddress, data, {
       from: fromAddress,
       value,

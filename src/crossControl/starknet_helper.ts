@@ -1,10 +1,4 @@
-import {
-  Account,
-  Contract,
-  RpcProvider,
-  uint256,
-  validateAndParseAddress,
-} from "starknet";
+import { Account, Contract, uint256, validateAndParseAddress } from "starknet";
 import { STARKNET_ERC20_ABI, STARKNET_OB_SOURCE_ABI } from "../constant/abi";
 import { CONTRACT_TYPE_SOURCE, UINT_256_MAX } from "../constant/common";
 import { getContractAddressByType, throwNewError } from "../utils";
@@ -28,10 +22,6 @@ export async function sendTransfer(
 
   if (!fromChainInfo.contract || !contractAddress) {
     return throwNewError("Contract not in fromChainInfo.");
-  }
-
-  if (!fromChainInfo?.rpc || !fromChainInfo.rpc.length) {
-    return throwNewError("starknet rpc not configured");
   }
 
   const tokenContract = new Contract(STARKNET_ERC20_ABI, tokenAddress, account);
