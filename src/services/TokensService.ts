@@ -12,11 +12,6 @@ import { isArray } from "lodash";
 export default class TokensService {
   private static instance: TokensService;
   private tokens: ITokensByChain = {};
-  private readonly loadingPromise: Promise<void>;
-
-  constructor() {
-    this.loadingPromise = this.loadTokens();
-  }
 
   public static getInstance(): TokensService {
     if (!this.instance) {
@@ -30,17 +25,18 @@ export default class TokensService {
     try {
       this.tokens = (await queryTokens()) || {};
     } catch (error) {
-      throwNewError("TokensService init failed.");
+      throwNewError("TokensService init failed.", error);
     }
   }
 
   private async checkLoading() {
-    if (this.loadingPromise) {
-      await this.loadingPromise;
+    if (!Object.keys(this.tokens).length) {
+      await this.loadTokens();
     }
-    if (!this.tokens.length) {
-      this.loadTokens();
-    }
+  }
+
+  public updateConfig(): void {
+    this.tokens = {};
   }
 
   public async getTokensAllChainAsync() {

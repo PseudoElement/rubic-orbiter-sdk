@@ -4,25 +4,17 @@ import { throwNewError } from "../utils";
 
 export default class ChainsService {
   private static instance: ChainsService;
-  private readonly loadingPromise: Promise<void>;
   private chains: IChainInfo[] = [];
-
-  constructor() {
-    this.loadingPromise = this.loadAvailableChains();
-  }
 
   private async loadAvailableChains(): Promise<void> {
     try {
       this.chains = await queryChains();
     } catch (error) {
-      throwNewError("chainsService init failed.");
+      throwNewError("chainsService init failed.", error);
     }
   }
 
   private async checkLoading() {
-    if (this.loadingPromise) {
-      await this.loadingPromise;
-    }
     if (!this.chains.length) {
       await this.loadAvailableChains();
     }
@@ -34,6 +26,10 @@ export default class ChainsService {
     }
 
     return this.instance;
+  }
+
+  public updateConfig(): void {
+    this.chains = [];
   }
 
   public async getChainInfoAsync(chain: number | string): Promise<IChainInfo> {

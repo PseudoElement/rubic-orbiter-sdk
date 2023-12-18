@@ -14,8 +14,8 @@ export default class HistoryService {
     this.signer = signer;
   }
 
-  public updateSigner(signer: Account | Signer) {
-    this.signer = signer;
+  public updateConfig(config: { signer: Account | Signer }) {
+    this.signer = config.signer;
   }
 
   public async queryHistoryList(params: {

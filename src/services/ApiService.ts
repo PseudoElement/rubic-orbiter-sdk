@@ -5,9 +5,38 @@ import {
   Rates,
   ITransactionInfo,
   ISearchTxResponse,
+  TChainsResult,
+  IChainItem,
+  TTokensResult,
+  ITokenItem,
+  TRouterResult,
+  ICrossRule,
 } from "../types/common.types";
 import { equalsIgnoreCase, throwNewError } from "../utils";
 import { HexString } from "ethers-6/lib.commonjs/utils/data";
+import { getGlobalState } from "../globalState";
+
+const QUERY_API_MENU = {
+  openApi: {
+    mainnet:
+      "https://openapi.orbiter.finance/explore/v3/yj6toqvwh1177e1sexfy0u1pxx5j8o47",
+    testnet:
+      "https://openapi2.orbiter.finance/v3/yj6toqvwh1177e1sexfy0u1pxx5j8o47",
+  },
+  openApiSdk: {
+    mainnet: "https://api.orbiter.finance/sdk",
+    testnet: "https://openapi2.orbiter.finance/sdk",
+  },
+};
+
+const getCurrentQueryUrl = (type: "openApi" | "openApiSdk"): string => {
+  const globalState = getGlobalState();
+  const currentQueryApi =
+    type === "openApi" ? QUERY_API_MENU.openApi : QUERY_API_MENU.openApiSdk;
+  return globalState.isMainnet
+    ? currentQueryApi.mainnet
+    : currentQueryApi.testnet;
+};
 
 const COIN_BASE_API_URL = "https://api.coinbase.com";
 
@@ -39,15 +68,12 @@ export async function queryTransactionByAddress(
         list: ITransactionInfo[];
         count: number;
       };
-    }> = await Axios.post(
-      "https://openapi2.orbiter.finance/v3/yj6toqvwh1177e1sexfy0u1pxx5j8o47",
-      {
-        id: 1,
-        jsonrpc: "2.0",
-        method: "orbiter_getTransactionByAddress",
-        params: [account, pageNum, pageSize],
-      }
-    );
+    }> = await Axios.post(getCurrentQueryUrl("openApi"), {
+      id: 1,
+      jsonrpc: "2.0",
+      method: "orbiter_getTransactionByAddress",
+      params: [account, pageNum, pageSize],
+    });
     const result = res?.data?.result;
     if (result && Object.keys(result).length > 0) {
       return {
@@ -69,7 +95,7 @@ export async function queryTransactionByHash(
     const res: AxiosResponse<{
       result: ISearchTxResponse;
     }> = await Axios.get(
-      `https://openapi2.orbiter.finance/sdk/transaction/cross-chain/${hash}`
+      `${getCurrentQueryUrl("openApiSdk")}/transaction/cross-chain/${hash}`
     );
     const result = res?.data?.result;
     if (result && Object.keys(result).length > 0) {
@@ -88,10 +114,10 @@ export async function queryRates(currency: string) {
   );
 }
 
-export async function queryChains(): Promise<any> {
+export async function queryChains(): Promise<IChainItem[]> {
   try {
-    const queryChainsResult = await Axios.get(
-      "https://openapi2.orbiter.finance/sdk/chains"
+    const queryChainsResult: AxiosResponse<TChainsResult> = await Axios.get(
+      `${getCurrentQueryUrl("openApiSdk")}/chains`
     );
     if (
       queryChainsResult.status === 200 &&
@@ -99,37 +125,39 @@ export async function queryChains(): Promise<any> {
     ) {
       return queryChainsResult.data?.result ?? [];
     } else {
-      return [];
+      return [] as IChainItem[];
     }
   } catch (error: any) {
-    throwNewError("queryChains error.", error.message);
+    return throwNewError("queryChains error.", error.message);
   }
 }
 
-export async function queryTokens(): Promise<any> {
+export async function queryTokens(): Promise<{ [k: string]: ITokenItem[] }> {
   try {
-    const queryTokensResult = await Axios.get(
-      "https://openapi2.orbiter.finance/sdk/tokens"
+    const queryTokensResult: AxiosResponse<TTokensResult> = await Axios.get(
+      `${getCurrentQueryUrl("openApiSdk")}/tokens`
     );
     if (
       queryTokensResult.status === 200 &&
       queryTokensResult.data?.status === "success"
     ) {
-      return queryTokensResult.data?.result ?? {};
+      return (
+        queryTokensResult.data?.result ?? ({} as { [k: string]: ITokenItem[] })
+      );
     } else {
-      return {};
+      return {} as { [k: string]: ITokenItem[] };
     }
   } catch (error: any) {
-    throwNewError("queryChains error.", error.message);
+    return throwNewError("queryChains error.", error.message);
   }
 }
 
 export async function queryRouters(
   dealerId?: string | HexString
-): Promise<any> {
+): Promise<ICrossRule[]> {
   try {
-    const queryTokensResult = await Axios.get(
-      `https://openapi2.orbiter.finance/sdk/routers${
+    const queryTokensResult: AxiosResponse<TRouterResult> = await Axios.get(
+      `${getCurrentQueryUrl("openApiSdk")}/routers${
         dealerId ? `/${dealerId}` : ""
       }`
     );
@@ -137,11 +165,11 @@ export async function queryRouters(
       queryTokensResult.status === 200 &&
       queryTokensResult.data?.status === "success"
     ) {
-      return queryTokensResult.data?.result ?? [];
+      return queryTokensResult.data?.result ?? ([] as ICrossRule[]);
     } else {
-      return [];
+      return [] as ICrossRule[];
     }
   } catch (error: any) {
-    throwNewError("queryChains error.", error.message);
+    return throwNewError("queryChains error.", error.message);
   }
 }

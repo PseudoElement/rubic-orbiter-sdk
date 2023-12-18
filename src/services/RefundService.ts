@@ -16,8 +16,8 @@ export default class RefundService {
     this.tokensService = TokensService.getInstance();
   }
 
-  public updateSigner(signer: Account | Signer) {
-    this.signer = signer;
+  public updateConfig(config: { signer: Account | Signer }) {
+    this.signer = config.signer;
   }
 
   public async toSend(params: {

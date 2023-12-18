@@ -6,12 +6,10 @@ import { HexString } from "ethers-6/lib.commonjs/utils/data";
 export default class CrossRulesService {
   private static instance: CrossRulesService;
   private dealerId: string | HexString;
-  private readonly loadingPromise: Promise<void>;
   private crossRules: ICrossRule[] = [];
 
   constructor(dealerId?: string | HexString) {
     this.dealerId = dealerId || "";
-    this.loadingPromise = this.loadRoutersRule();
   }
 
   private async loadRoutersRule(): Promise<void> {
@@ -23,17 +21,14 @@ export default class CrossRulesService {
   }
 
   private async checkLoading() {
-    if (this.loadingPromise) {
-      await this.loadingPromise;
-    }
     if (!this.crossRules.length) {
       await this.loadRoutersRule();
     }
   }
 
-  public updateDealerId(dealerId: string | HexString) {
-    this.dealerId = dealerId;
+  public updateConfig(config: { dealerId: string | HexString }) {
     this.crossRules = [];
+    this.dealerId = config.dealerId;
   }
 
   public static getInstance(): CrossRulesService {

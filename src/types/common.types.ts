@@ -10,6 +10,7 @@ import { Transaction } from "zksync";
 export interface IOBridgeConfig {
   signer: Signer | Account;
   dealerId: string | HexString;
+  isMainnet: boolean;
 }
 
 export interface Rates {
@@ -187,3 +188,61 @@ export type TBridgeResponse =
   | TTransactionResponse
   | TTransaction
   | TIMXTransactionResponse;
+
+export interface IChainItem {
+  chainId: string;
+  networkId: string;
+  internalId: string;
+  name: string;
+  nativeCurrency: {
+    id: number;
+    name: string;
+    symbol: string;
+    decimals: number;
+    address: string;
+  };
+  tokens: [
+    {
+      id: number;
+      name: string;
+      symbol: string;
+      decimals: number;
+      address: string;
+    }
+  ];
+}
+
+export interface IV3Result {
+  status: "success" | "false";
+  message: string;
+  params: {
+    url: string;
+    method: "GET" | "POST";
+    routes?: object;
+  };
+}
+
+export type TChainsResult = IV3Result & {
+  result: IChainItem[];
+};
+
+export interface ITokenItem {
+  name: string;
+  symbol: string;
+  decimals: number;
+  address: string;
+}
+
+export type TTokensResult = IV3Result & {
+  result: {
+    [k: string]: ITokenItem[];
+  };
+};
+
+export type TRouterResult = IV3Result & {
+  result: ICrossRule[];
+};
+
+export interface IGlobalState {
+  isMainnet: boolean;
+}

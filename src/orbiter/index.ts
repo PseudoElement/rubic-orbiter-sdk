@@ -15,6 +15,7 @@ import CrossControl from "../crossControl";
 import {
   IChainInfo,
   ICrossRule,
+  IGlobalState,
   IOBridgeConfig,
   ISearchTxResponse,
   IToken,
@@ -28,6 +29,7 @@ import {
 } from "../types";
 import { throwNewError } from "../utils";
 import { isFromChainIdMatchProvider } from "./utils";
+import { getGlobalState, setGlobalState } from "../globalState";
 
 export default class Orbiter {
   private static instance: Orbiter;
@@ -45,6 +47,8 @@ export default class Orbiter {
   constructor(config?: IOBridgeConfig) {
     this.signer = config?.signer || ({} as Signer | Account);
     this.dealerId = config?.dealerId || "";
+
+    setGlobalState({ isMainnet: config?.isMainnet || false });
 
     this.chainsService = ChainsService.getInstance();
     this.tokensService = TokenService.getInstance();
@@ -67,10 +71,24 @@ export default class Orbiter {
     this.signer = config.signer ?? this.signer;
     this.dealerId = config.dealerId ?? this.dealerId;
 
-    this.historyService.updateSigner(this.signer);
-    this.refundService.updateSigner(this.signer);
-    this.crossRulesService.updateDealerId(this.dealerId);
+    setGlobalState({
+      isMainnet: config.isMainnet ?? getGlobalState().isMainnet,
+    });
+
+    this.chainsService.updateConfig();
+    this.tokensService.updateConfig();
+    this.historyService.updateConfig({ signer: this.signer });
+    this.refundService.updateConfig({ signer: this.signer });
+    this.crossRulesService.updateConfig({ dealerId: this.dealerId });
   }
+
+  getGlobalState = (): IGlobalState => {
+    return getGlobalState();
+  };
+
+  setGlobalState = (newState: IGlobalState): void => {
+    return setGlobalState(newState);
+  };
 
   getChainsAsync = async (): Promise<IChainInfo[]> => {
     return await this.chainsService.getChainsAsync();
