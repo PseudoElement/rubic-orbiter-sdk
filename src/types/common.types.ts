@@ -6,6 +6,7 @@ import {
 import { HexString } from "ethers-6/lib.commonjs/utils/data";
 import { Account } from "starknet";
 import { Transaction } from "zksync";
+import Web3 from "web3";
 
 export interface IOBridgeConfig {
   signer: Signer | Account;
@@ -244,5 +245,31 @@ export type TRouterResult = IV3Result & {
 };
 
 export interface IGlobalState {
+  [k: string]: boolean | Web3;
   isMainnet: boolean;
+  loopringSigner: Web3;
+}
+interface PublicKey {
+  /**
+   * The public keys x part.
+   * @type {string}
+   * @memberof PublicKey
+   */
+  x: string;
+  /**
+   * The public keys y part.
+   * @type {string}
+   * @memberof PublicKey
+   */
+  y: string;
+}
+export interface AccountInfo {
+  accountId: number;
+  owner: string;
+  frozen: boolean;
+  publicKey: PublicKey;
+  tags?: string;
+  nonce: number;
+  keyNonce: number;
+  keySeed: string;
 }

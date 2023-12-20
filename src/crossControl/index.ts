@@ -1,8 +1,4 @@
-import {
-  ContractTransactionResponse,
-  Signer,
-  TransactionResponse,
-} from "ethers-6";
+import { Signer } from "ethers-6";
 import ethers from "ethers";
 import {
   submitSignedTransactionsBatch,
@@ -11,7 +7,7 @@ import {
   Wallet,
 } from "zksync";
 import { CrossAddress } from "../crossAddress/crossAddress";
-// import loopring from "./loopring";
+import loopring from "./loopring";
 import {
   getTransferValue,
   getZkSyncProvider,
@@ -42,6 +38,8 @@ import {
 import { Account } from "starknet";
 import { OrbiterRouterType, orbiterRouterTransfer } from "./orbiterRouter";
 import TokenService from "../services/TokensService";
+import { getGlobalState } from "../globalState";
+import Web3 from "web3";
 
 export default class CrossControl {
   private static instance: CrossControl;
@@ -157,9 +155,9 @@ export default class CrossControl {
       case CHAIN_ID_MAINNET.zksync:
       case CHAIN_ID_TESTNET.zksync_test:
         return await this.zkTransfer();
-      // case CHAIN_ID_MAINNET.loopring:
-      // case CHAIN_ID_TESTNET.loopring_test:
-      //   return await this.loopringTransfer();
+      case CHAIN_ID_MAINNET.loopring:
+      case CHAIN_ID_TESTNET.loopring_test:
+        return await this.loopringTransfer();
       case CHAIN_ID_MAINNET.starknet:
       case CHAIN_ID_TESTNET.starknet_test:
         return await this.starknetTransfer();
@@ -288,7 +286,6 @@ export default class CrossControl {
           }
         )) as T;
       } catch (error) {
-        console.log(error);
         return throwNewError("evm transfer error", error);
       }
     }
@@ -393,49 +390,56 @@ export default class CrossControl {
     }
   }
 
-  // private async loopringTransfer<T>(): Promise<T> {
-  //   const {
-  //     selectMakerConfig,
-  //     crossAddressReceipt,
-  //     fromChainID,
-  //     tValue,
-  //     tokenAddress,
-  //     fromChainInfo,
-  //     toChainInfo,
-  //     account,
-  //   } = this.crossConfig;
-  //   const p_text = 9000 + Number(toChainInfo.internalId) + "";
-  //   const amount = tValue.tAmount;
-  //   const memo = crossAddressReceipt
-  //     ? `${p_text}_${crossAddressReceipt}`
-  //     : p_text;
-  //   if (memo.length > 128)
-  //     return throwNewError("The sending address is too long");
-  //   try {
-  //     return await loopring.sendTransfer(
-  //       account,
-  //       fromChainID,
-  //       fromChainInfo,
-  //       selectMakerConfig.endpoint,
-  //       tokenAddress,
-  //       amount,
-  //       memo
-  //     );
-  //   } catch (error: any) {
-  //     const errorEnum = {
-  //       "account is not activated":
-  //         "This Loopring account is not yet activated, please activate it before transferring.",
-  //       "User account is frozen":
-  //         "Your Loopring account is frozen, please check your Loopring account status on Loopring website. Get more details here: https://docs.loopring.io/en/basics/key_mgmt.html?h=frozen",
-  //       default: error.message,
-  //     };
-  //     return throwNewError(
-  //       errorEnum[error.message as keyof typeof errorEnum] ||
-  //         errorEnum.default ||
-  //         "Something was wrong by loopring transfer. please check it all"
-  //     );
-  //   }
-  // }
+  private async loopringTransfer<T>(): Promise<T> {
+    const {
+      selectMakerConfig,
+      crossAddressReceipt,
+      fromChainID,
+      tValue,
+      tokenAddress,
+      toChainInfo,
+      account,
+    } = this.crossConfig;
+    const p_text = 9000 + Number(toChainInfo.internalId) + "";
+    const amount = tValue.tAmount;
+    const memo = crossAddressReceipt
+      ? `${p_text}_${crossAddressReceipt}`
+      : p_text;
+    if (memo.length > 128)
+      return throwNewError("The sending address is too long");
+
+    const loopringSigner: Web3 = getGlobalState().loopringSigner;
+    if (!Object.keys(loopringSigner).length) {
+      return throwNewError(
+        "should update loopringSigner by [generateLoopringSignerAndSetGlobalState] function."
+      );
+    }
+    try {
+      return await loopring.sendTransfer(
+        loopringSigner,
+        account,
+        fromChainID,
+        selectMakerConfig.endpoint,
+        tokenAddress,
+        amount,
+        memo
+      );
+    } catch (error: any) {
+      const errorEnum = {
+        "account is not activated":
+          "This Loopring account is not yet activated, please activate it before transferring.",
+        "User account is frozen":
+          "Your Loopring account is frozen, please check your Loopring account status on Loopring website. Get more details here: https://docs.loopring.io/en/basics/key_mgmt.html?h=frozen",
+        default: error.message,
+      };
+      return throwNewError(
+        errorEnum[error.message as keyof typeof errorEnum] ||
+          errorEnum.default ||
+          "Something was wrong by loopring transfer. please check it all",
+        error
+      );
+    }
+  }
 
   private async starknetTransfer<T>(): Promise<T> {
     const {
@@ -516,6 +520,7 @@ export default class CrossControl {
       return throwNewError("transfer to starknet error", err);
     }
   }
+
   private async imxTransfer<T>(): Promise<T> {
     const {
       selectMakerConfig,

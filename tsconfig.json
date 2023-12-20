@@ -3,12 +3,17 @@
     "types": [
       "node"
     ],
+    "lib": [
+      "es2020",
+      "es5"  ,
+      "dom"
+    ],
     "declaration": true /* Generates corresponding '.d.ts' file. */,
+    "declarationMap": true,
     "esModuleInterop": true,
     "importHelpers": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "module": "UMD",
+    "module": "esnext",
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "strictPropertyInitialization": true,
@@ -19,8 +24,13 @@
     "moduleResolution": "Node",
     "outDir": "./dist" /* Redirect output structure to the directory. */,
     "strict": true,
-    "target": "ES2020",
+    "target": "ES2022",
   },
-  "include": ["src/*.ts"],
-  "exclude": ["test", "demo", "node_modules", "./dist/**/*", "./types/**/*"]
+  "include": [
+    "src",
+    "src/**/*.json",
+    "src/*.ts",
+    "src/*",
+  ],
+  "exclude": ["test", "demo", "node_modules", "dist", "./dist/**/*", "./types/**/*"]
 }

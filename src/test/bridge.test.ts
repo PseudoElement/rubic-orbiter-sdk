@@ -15,6 +15,7 @@ describe("orbiter tests", () => {
   const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
   const STARKNET_PRIVATE_KEY = process.env.STARKNET_PRIVATE_KEY || "";
   const STARKNET_ADDRESS = process.env.STARKNET_ADDRESS || "";
+
   // rpcs
   const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
   const OP_GOERLI_RPC_URL = process.env.OP_GOERLI_RPC_URL;
@@ -123,45 +124,48 @@ describe("orbiter tests", () => {
     expect(result && result.txHash).toBeDefined;
   });
 
-  // test("loopring ETH cross test", async () => {
-  //   const loopringCrossConfig = {
-  //     fromChainID: "loopring_test",
-  //     fromCurrency: "ETH",
-  //     toChainID: "420",
-  //     toCurrency: "ETH",
-  //     transferValue: 0.001,
-  //   };
-  //   const tx = await orbiter.toBridge(loopringCrossConfig);
-  //   console.log(tx.txHash);
-  //   expect(tx.txHash).toBeDefined;
-  // });
+  test.only("loopring ETH cross test", async () => {
+    orbiter.generateLoopringSignerAndSetGlobalState(
+      PRIVATE_KEY,
+      GOERLI_RPC_URL
+    );
+    const loopringCrossConfig = {
+      fromChainID: "loopring_test",
+      fromCurrency: "ETH",
+      toChainID: "420",
+      toCurrency: "ETH",
+      transferValue: 0.001,
+    };
+    const tx = await orbiter.toBridge<any>(loopringCrossConfig);
+    console.log(tx);
+    expect(tx).toBeDefined;
+  });
 
-  // test("starknet ETH cross to goerli test", async () => {
-  //   const provider = new snProvider({ nodeUrl: SN_GOERLI_RPC_URL || "" });
-  //   const account = new Account(
-  //     provider,
-  //     STARKNET_ADDRESS,
-  //     STARKNET_PRIVATE_KEY
-  //   );
-  //   orbiter.updateConfig({ signer: account});
-
-  //   let result
-  //   try {
-  //     const starknetCrossConfig = {
-  //       fromChainID: "SN_GOERLI",
-  //       fromCurrency: "ETH",
-  //       toChainID: "5",
-  //       toCurrency: "ETH",
-  //       transferValue: 0.001,
-  //       crossAddressReceipt: "0x15962f38e6998875F9F75acDF8c6Ddc743F11041",
-  //     };
-  //     result = await orbiter.toBridge(starknetCrossConfig);
-  //   } catch (error: any) {
-  //     console.log(error.message);
-  //   }
-  //   console.log(result);
-  //   expect(result).toBeDefined;
-  // });
+  test("starknet ETH cross to goerli test", async () => {
+    const provider = new snProvider({ nodeUrl: SN_GOERLI_RPC_URL || "" });
+    const account = new Account(
+      provider,
+      STARKNET_ADDRESS,
+      STARKNET_PRIVATE_KEY
+    );
+    orbiter.updateConfig({ signer: account });
+    let result;
+    try {
+      const starknetCrossConfig = {
+        fromChainID: "SN_GOERLI",
+        fromCurrency: "ETH",
+        toChainID: "5",
+        toCurrency: "ETH",
+        transferValue: 0.001,
+        crossAddressReceipt: "0x15962f38e6998875F9F75acDF8c6Ddc743F11041",
+      };
+      result = await orbiter.toBridge(starknetCrossConfig);
+    } catch (error: any) {
+      console.log(error.message);
+    }
+    console.log(result);
+    expect(result).toBeDefined();
+  });
 
   test("transfer to starknet ETH cross by goerli test", async () => {
     const starknetCrossConfig = {
@@ -229,7 +233,7 @@ describe("orbiter tests", () => {
     expect(result && result.hash).toBeDefined;
   });
 
-  test.only("evm signer is not match with the source chain test", async () => {
+  test("evm signer is not match with the source chain test", async () => {
     const opProvider = new ethers.JsonRpcProvider(OP_GOERLI_RPC_URL);
     provider = opProvider;
     const opSigner = signer.connect(provider);
@@ -251,7 +255,7 @@ describe("orbiter tests", () => {
     }
   });
 
-  test.only("starknet account is not match with the source chain test", async () => {
+  test("starknet account is not match with the source chain test", async () => {
     const provider = new snProvider({ nodeUrl: SN_GOERLI_RPC_URL || "" });
     const account = new Account(
       provider,

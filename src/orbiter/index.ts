@@ -30,6 +30,10 @@ import {
 import { throwNewError } from "../utils";
 import { isFromChainIdMatchProvider } from "./utils";
 import { getGlobalState, setGlobalState } from "../globalState";
+import HDWalletProvider from "@truffle/hdwallet-provider";
+import { isArray } from "lodash";
+import { CHAIN_ID_MAINNET, CHAIN_ID_TESTNET } from "../constant/common";
+import Web3 from "web3";
 
 export default class Orbiter {
   private static instance: Orbiter;
@@ -67,20 +71,39 @@ export default class Orbiter {
     return this.instance;
   }
 
-  public updateConfig(config: Partial<IOBridgeConfig>): void {
+  updateConfig = (config: Partial<IOBridgeConfig>): void => {
     this.signer = config.signer ?? this.signer;
     this.dealerId = config.dealerId ?? this.dealerId;
 
-    setGlobalState({
-      isMainnet: config.isMainnet ?? getGlobalState().isMainnet,
-    });
+    if (config.hasOwnProperty("isMainnet")) {
+      setGlobalState({
+        isMainnet: config.isMainnet ?? getGlobalState().isMainnet,
+      });
+      this.chainsService.updateConfig();
+      this.tokensService.updateConfig();
+    }
 
-    this.chainsService.updateConfig();
-    this.tokensService.updateConfig();
     this.historyService.updateConfig({ signer: this.signer });
     this.refundService.updateConfig({ signer: this.signer });
     this.crossRulesService.updateConfig({ dealerId: this.dealerId });
-  }
+  };
+
+  generateLoopringSignerAndSetGlobalState = (
+    privateKeys: string | string[],
+    web3ProviderOrURL: any | string
+  ): void => {
+    Web3.providers.HttpProvider.prototype.sendAsync =
+      Web3.providers.HttpProvider.prototype.send;
+
+    const hdSigner: any = new HDWalletProvider({
+      privateKeys: isArray(privateKeys) ? privateKeys : [privateKeys],
+      providerOrUrl: web3ProviderOrURL,
+    });
+
+    setGlobalState({
+      loopringSigner: new Web3(hdSigner),
+    });
+  };
 
   getGlobalState = (): IGlobalState => {
     return getGlobalState();
@@ -186,6 +209,15 @@ export default class Orbiter {
       transferValue,
       transferExt,
     } = transferConfig;
+    if (
+      (fromChainID === CHAIN_ID_MAINNET.loopring ||
+        fromChainID === CHAIN_ID_TESTNET.loopring_test) &&
+      !Object.keys(getGlobalState().loopringSigner).length
+    ) {
+      return throwNewError(
+        "should update loopring Signer by [generateLoopringSignerAndSetGlobalState] function."
+      );
+    }
     const fromChainInfo = await this.getChainInfoAsync(fromChainID);
 
     await isFromChainIdMatchProvider({ signer: this.signer, fromChainInfo });
