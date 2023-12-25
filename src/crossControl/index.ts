@@ -415,7 +415,7 @@ export default class CrossControl {
       );
     }
     try {
-      return await loopring.sendTransfer(
+      return (await loopring.sendTransfer(
         loopringSigner,
         account,
         fromChainID,
@@ -423,7 +423,7 @@ export default class CrossControl {
         tokenAddress,
         amount,
         memo
-      );
+      )) as T;
     } catch (error: any) {
       const errorEnum = {
         "account is not activated":

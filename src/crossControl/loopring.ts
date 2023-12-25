@@ -4,21 +4,29 @@ import { CHAIN_ID_MAINNET } from "../constant/common";
 import Axios from "../request";
 import { AccountInfo } from "../types";
 import { sleep } from "../utils";
-const loopring = require("@loopring-web/loopring-sdk");
+import {
+  ChainId,
+  UserAPI,
+  ExchangeAPI,
+  GlobalAPI,
+  generateKeyPair,
+  ConnectorNames,
+  RESULT_INFO,
+} from "@loopring-web/loopring-sdk";
 
 const getNetworkId = (fromChainID: string) => {
   return fromChainID === CHAIN_ID_MAINNET.loopring
-    ? loopring.ChainId.MAINNET
-    : loopring.ChainId.GOERLI;
+    ? ChainId.MAINNET
+    : ChainId.GOERLI;
 };
 
 export default {
   getUserAPI: function (fromChainID: string) {
-    return new loopring.UserAPI({ chainId: getNetworkId(fromChainID) });
+    return new UserAPI({ chainId: getNetworkId(fromChainID) });
   },
 
   getExchangeAPI: function (fromChainID: string) {
-    return new loopring.ExchangeAPI({ chainId: getNetworkId(fromChainID) });
+    return new ExchangeAPI({ chainId: getNetworkId(fromChainID) });
   },
   getLpTokenInfoOnce: async function (
     fromChainID: string,
@@ -54,7 +62,6 @@ export default {
       fromChainID,
       tokenAddress
     );
-    console.log(theLpTokenInfo, "theLpTokenInfo");
     if (theLpTokenInfo) {
       return theLpTokenInfo;
     } else {
@@ -103,13 +110,17 @@ export default {
     tokenAddress: string,
     amount: BigInt,
     memo: string
-  ) {
+  ): Promise<
+    | (Omit<any, "resultInfo"> & {
+        raw_data: Omit<any, "resultInfo">;
+      })
+    | RESULT_INFO
+  > {
     const web3 = signer;
     const networkId = getNetworkId(fromChainID);
     const exchangeApi = this.getExchangeAPI(fromChainID);
     const userApi = this.getUserAPI(fromChainID);
     const accountResult = await this.accountInfo(address, fromChainID);
-
     if (!accountResult) {
       throw Error("loopring get account error");
     }
@@ -144,18 +155,18 @@ export default {
       keySeed:
         accInfo.keySeed && accInfo.keySeed !== ""
           ? accInfo.keySeed
-          : loopring.GlobalAPI.KEY_MESSAGE.replace(
+          : GlobalAPI.KEY_MESSAGE.replace(
               "${exchangeAddress}",
               exchangeInfo.exchangeAddress
             ).replace("${nonce}", (accInfo.nonce - 1).toString()),
-      walletType: "Unknown",
+      walletType: ConnectorNames.Unknown,
       chainId: networkId,
     };
     if (isCounterFactual) {
       Object.assign(options, { accountId });
     }
 
-    const eddsaKey = await loopring.generateKeyPair(options);
+    const eddsaKey = await generateKeyPair(options);
 
     const GetUserApiKeyRequest = {
       accountId,
@@ -202,7 +213,7 @@ export default {
             request: OriginTransferRequestV3,
             web3,
             chainId: networkId,
-            walletType: "Unknown",
+            walletType: ConnectorNames.Unknown,
             eddsaKey: eddsaKey.sk,
             apiKey,
           },
@@ -212,7 +223,7 @@ export default {
           request: OriginTransferRequestV3,
           web3,
           chainId: networkId,
-          walletType: "Unknown",
+          walletType: ConnectorNames.Unknown,
           eddsaKey: eddsaKey.sk,
           apiKey,
         });

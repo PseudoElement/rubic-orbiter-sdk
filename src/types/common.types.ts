@@ -184,11 +184,29 @@ export type TTransactionResponse = TransactionResponse;
 export type TTransaction = Transaction;
 export type TIMXTransactionResponse = IImxTransactionResponse;
 
+export type ILoopringResponse = {
+  hash: string;
+  status: string;
+  isIdempotent: boolean;
+  accountId: number;
+  tokenId: number;
+  storageId: number;
+  raw_data: {
+    hash: string;
+    status: string;
+    isIdempotent: boolean;
+    accountId: number;
+    tokenId: number;
+    storageId: number;
+  };
+};
+
 export type TBridgeResponse =
   | TContractTransactionResponse
   | TTransactionResponse
   | TTransaction
-  | TIMXTransactionResponse;
+  | TIMXTransactionResponse
+  | ILoopringResponse;
 
 export interface IChainItem {
   chainId: string;

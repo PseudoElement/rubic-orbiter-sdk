@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, test } from "vitest";
 import Orbiter from "../orbiter";
 import { Account, RpcProvider as snProvider } from "starknet";
 import {
+  ILoopringResponse,
   TContractTransactionResponse,
   TIMXTransactionResponse,
   TTransaction,
@@ -136,9 +137,11 @@ describe("orbiter tests", () => {
       toCurrency: "ETH",
       transferValue: 0.001,
     };
-    const tx = await orbiter.toBridge<any>(loopringCrossConfig);
-    console.log(tx);
-    expect(tx).toBeDefined;
+    const result = await orbiter.toBridge<ILoopringResponse>(
+      loopringCrossConfig
+    );
+    console.log(result.hash, "loopring hash");
+    expect(result.hash).toBeDefined;
   });
 
   test("starknet ETH cross to goerli test", async () => {
