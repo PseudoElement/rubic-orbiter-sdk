@@ -53,9 +53,9 @@ describe("orbiter tests", () => {
     try {
       result = await orbiter.toRefund(evmRefundOptions);
     } catch (error: any) {
-      expect(error.message).eq(
-        "evm signer is not match with the source chain."
-      );
+      expect(
+        error.message.includes("evm signer is not match with the source chain.")
+      ).toBeTruthy();
     }
   });
 
@@ -84,7 +84,7 @@ describe("orbiter tests", () => {
     }
   });
 
-  test.only("refund evm test", async () => {
+  test("refund evm test", async () => {
     const goerliProvider = new ethers.JsonRpcProvider(GOERLI_RPC_URL);
     provider = goerliProvider;
     const goerliSigner = signer.connect(provider);
