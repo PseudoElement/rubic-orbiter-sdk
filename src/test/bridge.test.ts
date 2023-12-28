@@ -87,6 +87,26 @@ describe("orbiter tests", () => {
     expect(result && result.hash).toBeDefined;
   });
 
+  test.only("ERC20 to ETH cross test", async () => {
+    const crossConfig = {
+      fromChainID: "5",
+      fromCurrency: "USDC",
+      toChainID: "420",
+      toCurrency: "ETH",
+      transferValue: 5,
+    };
+    let result;
+    try {
+      result = await orbiter.toBridge<TContractTransactionResponse>(
+        crossConfig
+      );
+    } catch (error: any) {
+      console.log(error.message);
+    }
+    console.log(result && result.hash, "ERC20 to ETH");
+    expect(result && result.hash).toBeDefined;
+  });
+
   test("evm ETH cross to op test", async () => {
     const evmCrossConfig = {
       fromChainID: "5",
@@ -125,7 +145,7 @@ describe("orbiter tests", () => {
     expect(result && result.txHash).toBeDefined;
   });
 
-  test.only("loopring ETH cross test", async () => {
+  test("loopring ETH cross test", async () => {
     orbiter.generateLoopringSignerAndSetGlobalState(
       PRIVATE_KEY,
       GOERLI_RPC_URL
