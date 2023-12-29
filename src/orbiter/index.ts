@@ -164,6 +164,7 @@ export default class Orbiter {
   };
 
   getHistoryListAsync = async (params: {
+    account: string;
     pageNum: number;
     pageSize: number;
   }): Promise<{

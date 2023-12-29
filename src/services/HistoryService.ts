@@ -19,19 +19,16 @@ export default class HistoryService {
   }
 
   public async queryHistoryList(params: {
+    account: string;
     pageNum: number;
     pageSize: number;
   }): Promise<{
     transactions: ITransactionInfo[];
     count: number;
   }> {
-    const account =
-      "address" in this.signer
-        ? this.signer?.address
-        : await this.signer?.getAddress();
-    if (!account)
-      return throwNewError("queryHistoryList has no signer / account.");
-    const { pageNum, pageSize } = params;
+    const { pageNum, pageSize, account } = params;
+    if (!pageNum || !pageSize || !account)
+      return throwNewError("queryHistoryList params error.");
     return await queryTransactionByAddress(account, pageNum, pageSize);
   }
 

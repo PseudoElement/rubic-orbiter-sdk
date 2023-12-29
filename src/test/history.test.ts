@@ -26,6 +26,7 @@ describe.only("bridge tests", () => {
 
   test("get all history test", async () => {
     const result = await orbiter.getHistoryListAsync({
+      account: await signer.getAddress(),
       pageNum: 10,
       pageSize: 1,
     });
