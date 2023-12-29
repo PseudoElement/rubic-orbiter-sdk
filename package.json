@@ -6,7 +6,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "postinstall":"patch-package",
+    "postinstall": "patch-package",
     "test": "vitest --run --dangerouslyIgnoreUnhandledErrors",
     "build": "tsc --project ./tsconfig.json && tsc --project ./tsconfig.cjs.json"
   },
@@ -35,11 +35,11 @@
   "license": "ISC",
   "dependencies": {
     "@imtbl/imx-sdk": "^1.5.0",
-    "@loopring-web/loopring-sdk": "3.5.12",
     "@truffle/hdwallet-provider": "^2.1.15",
     "axios": "^1.6.2",
     "bignumber.js": "^9.1.2",
     "ethers-6": "npm:ethers@^6.8.1",
+    "loopring-fix-web-sdk": "^1.0.1",
     "starknet": "^5.24.5",
     "web3": "^1.7.4",
     "zksync": "^0.11.3"

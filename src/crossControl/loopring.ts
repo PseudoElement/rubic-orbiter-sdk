@@ -2,9 +2,9 @@ import Web3 from "web3";
 import config from "../constant/config";
 import { CHAIN_ID_MAINNET } from "../constant/common";
 import Axios from "../request";
-import { AccountInfo } from "../types";
+import { AccountInfo, ILoopringResponse } from "../types";
 import { sleep } from "../utils";
-import {
+const {
   ChainId,
   UserAPI,
   ExchangeAPI,
@@ -12,7 +12,7 @@ import {
   generateKeyPair,
   ConnectorNames,
   RESULT_INFO,
-} from "@loopring-web/loopring-sdk";
+} = require("loopring-fix-web-sdk");
 
 const getNetworkId = (fromChainID: string) => {
   return fromChainID === CHAIN_ID_MAINNET.loopring
@@ -110,12 +110,7 @@ export default {
     tokenAddress: string,
     amount: BigInt,
     memo: string
-  ): Promise<
-    | (Omit<any, "resultInfo"> & {
-        raw_data: Omit<any, "resultInfo">;
-      })
-    | RESULT_INFO
-  > {
+  ): Promise<ILoopringResponse> {
     const web3 = signer;
     const networkId = getNetworkId(fromChainID);
     const exchangeApi = this.getExchangeAPI(fromChainID);

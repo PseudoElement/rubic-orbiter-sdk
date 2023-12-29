@@ -87,7 +87,7 @@ describe("orbiter tests", () => {
     expect(result && result.hash).toBeDefined;
   });
 
-  test.only("ERC20 to ETH cross test", async () => {
+  test("ERC20 to ETH cross test", async () => {
     const crossConfig = {
       fromChainID: "5",
       fromCurrency: "USDC",
@@ -140,7 +140,6 @@ describe("orbiter tests", () => {
     } catch (error: any) {
       console.log(error.message);
     }
-    console.log(result, "zksync lite eth");
     console.log(result && result.txHash, "zksync lite hash");
     expect(result && result.txHash).toBeDefined;
   });
@@ -153,7 +152,7 @@ describe("orbiter tests", () => {
     const loopringCrossConfig = {
       fromChainID: "loopring_test",
       fromCurrency: "ETH",
-      toChainID: "420",
+      toChainID: "5",
       toCurrency: "ETH",
       transferValue: 0.001,
     };
