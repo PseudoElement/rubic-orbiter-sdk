@@ -185,6 +185,7 @@ export default class Orbiter {
     amount: number | string;
     token: TTokenName | TAddress | TSymbol;
     fromChainId: string | number;
+    isLoopring: boolean;
   }): Promise<TransactionResponse | ContractTransactionResponse> => {
     try {
       const fromChainInfo = await this.getChainInfoAsync(
@@ -194,6 +195,7 @@ export default class Orbiter {
       await isFromChainIdMatchProvider({ signer: this.signer, fromChainInfo });
       return await this.refundService.toSend(sendOptions);
     } catch (error: any) {
+      console.log(error);
       return throwNewError("toRefund function error", error.message);
     }
   };

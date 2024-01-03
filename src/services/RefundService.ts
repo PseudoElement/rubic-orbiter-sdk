@@ -1,9 +1,20 @@
-import { equalsIgnoreCase, getContract, throwNewError } from "../utils";
+import {
+  equalsIgnoreCase,
+  getContract,
+  isEthTokenAddress,
+  throwNewError,
+} from "../utils";
 import { Signer, ethers } from "ethers-6";
-import { Account } from "starknet";
+import { Account, Contract, uint256 } from "starknet";
 import ChainsService from "./ChainsService";
 import TokensService from "./TokensService";
 import { IChainInfo, IToken, TAddress, TSymbol, TTokenName } from "../types";
+import { STARKNET_ERC20_ABI } from "../constant/abi";
+import { getTransferValue } from "../orbiter/utils";
+import BigNumber from "bignumber.js";
+import Web3 from "web3";
+import { getGlobalState } from "../globalState";
+import loopring from "../crossControl/loopring";
 
 export default class RefundService {
   private signer: Account | Signer;
@@ -25,10 +36,11 @@ export default class RefundService {
     amount: number | string;
     token: TTokenName | TAddress | TSymbol;
     fromChainId: string | number;
+    isLoopring: boolean;
   }): Promise<any> {
     if (!Object.keys(this.signer).length)
       return throwNewError("can not send transfer without signer.");
-    const { to, amount, token, fromChainId } = params;
+    const { to, amount, token, fromChainId, isLoopring } = params;
     if (!to || !amount || !token) return throwNewError("toSend params error.");
     let account: string | Promise<string>;
     const tokenInfo = await this.tokensService.getTokenAsync(
@@ -40,6 +52,21 @@ export default class RefundService {
     const fromChainInfo = await this.chainsService.getChainInfoAsync(
       fromChainId
     );
+    if (isLoopring) {
+      const webSigner = getGlobalState().loopringSigner;
+      const account = await webSigner.eth.getAccounts();
+      if (!account) return throwNewError("loopring refund`s account is error.");
+      const options = {
+        to,
+        amount,
+        token,
+        account: account[0],
+        fromChainId,
+        tokenInfo,
+        fromChainInfo,
+      };
+      return await this.sendToLoopring(options);
+    }
     if ("getAddress" in this.signer) {
       account = await this.signer.getAddress();
       return await this.sendToEvm({
@@ -51,12 +78,86 @@ export default class RefundService {
         tokenInfo,
         fromChainInfo,
       });
-    } else {
+    } else if ("address" in this.signer) {
       account = this.signer.address;
+      return await this.sendToStarknet({
+        to,
+        amount,
+        token,
+        account,
+      });
+    }
+  }
+
+  private async sendToLoopring(options: {
+    account: string;
+    to: string;
+    amount: number | string;
+    token: TTokenName | TAddress | TSymbol;
+    fromChainId: string | number;
+    tokenInfo: IToken;
+    fromChainInfo: IChainInfo;
+  }) {
+    const { account, to, amount, token, fromChainInfo } = options;
+    const loopringSigner: Web3 = getGlobalState().loopringSigner;
+    if (!Object.keys(loopringSigner).length) {
+      return throwNewError(
+        "should update loopringSigner by [generateLoopringSignerAndSetGlobalState] function."
+      );
     }
     try {
+      return await loopring.sendTransfer(
+        loopringSigner,
+        account,
+        String(fromChainInfo.chainId),
+        to,
+        token,
+        ethers.parseUnits(String(amount)),
+        ""
+      );
     } catch (error: any) {
-      throwNewError(error.message);
+      const errorEnum = {
+        "account is not activated":
+          "This Loopring account is not yet activated, please activate it before transferring.",
+        "User account is frozen":
+          "Your Loopring account is frozen, please check your Loopring account status on Loopring website. Get more details here: https://docs.loopring.io/en/basics/key_mgmt.html?h=frozen",
+        default: error.message,
+      };
+      return throwNewError(
+        errorEnum[error.message as keyof typeof errorEnum] ||
+          errorEnum.default ||
+          "Something was wrong by loopring transfer. please check it all",
+        error
+      );
+    }
+  }
+
+  private async sendToStarknet(options: {
+    account: string;
+    to: string;
+    amount: number | string;
+    token: TTokenName | TAddress | TSymbol;
+  }) {
+    const currentSigner = this.signer as Account;
+    const { account, to, amount, token } = options;
+    const erc20Contract = new Contract(
+      STARKNET_ERC20_ABI,
+      token,
+      currentSigner
+    );
+    if (!account) return throwNewError("starknet account error");
+    try {
+      const transferERC20TxCall = erc20Contract.populate("transfer", [
+        to,
+        {
+          type: "struct",
+          ...uint256.bnToUint256(ethers.parseUnits(String(amount))),
+        },
+      ]);
+      return await currentSigner.execute(transferERC20TxCall);
+    } catch (e) {
+      console.log(e);
+      return throwNewError("starknet refund error", e);
     }
   }
 

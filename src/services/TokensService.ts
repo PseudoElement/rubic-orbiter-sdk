@@ -87,19 +87,16 @@ export default class TokensService {
   ) {
     await this.checkLoading();
     const targetChainTokensInfo = this.tokens[String(chainId)] || [];
-    if (!targetChainTokensInfo.length) return void 0;
+    if (!targetChainTokensInfo.length)
+      return throwNewError("getTokenAsync tokens is empry.");
 
     const findToken = (token: TTokenName | TAddress | TSymbol) => {
-      return (
-        targetChainTokensInfo.find((item: IToken) => {
-          return (
-            item.name === token ||
-            item.symbol === token ||
-            item.address === token
-          );
-        }) || void 0
-      );
+      return targetChainTokensInfo.find((item: IToken) => {
+        return (
+          item.name === token || item.symbol === token || item.address === token
+        );
+      });
     };
-    return findToken(token);
+    return findToken(token) || ({} as IToken);
   }
 }

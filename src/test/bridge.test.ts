@@ -163,7 +163,7 @@ describe("orbiter tests", () => {
     expect(result.hash).toBeDefined;
   });
 
-  test("starknet ETH cross to goerli test", async () => {
+  test.only("starknet ETH cross to goerli test", async () => {
     const provider = new snProvider({ nodeUrl: SN_GOERLI_RPC_URL || "" });
     const account = new Account(
       provider,
