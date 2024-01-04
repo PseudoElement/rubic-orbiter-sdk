@@ -1,4 +1,4 @@
-import { queryRouters } from "./ApiService";
+import { queryRouter } from "./ApiService";
 import { IChainInfo, ICrossRule } from "../types";
 import { throwNewError } from "../utils";
 import { HexString } from "ethers-6/lib.commonjs/utils/data";
@@ -6,7 +6,7 @@ import { HexString } from "ethers-6/lib.commonjs/utils/data";
 export default class CrossRulesService {
   private static instance: CrossRulesService;
   private dealerId: string | HexString;
-  private crossRules: ICrossRule[] = [];
+  private crossRouters: ICrossRule[] = [];
 
   constructor(dealerId?: string | HexString) {
     this.dealerId = dealerId || "";
@@ -14,20 +14,20 @@ export default class CrossRulesService {
 
   private async loadRoutersRule(): Promise<void> {
     try {
-      this.crossRules = await queryRouters(this.dealerId);
+      this.crossRouters = await queryRouter(this.dealerId);
     } catch (error: any) {
-      throwNewError("crossRules init failed.", error.message);
+      throwNewError("crossRouters init failed.", error.message);
     }
   }
 
   private async checkLoading() {
-    if (!this.crossRules.length) {
+    if (!this.crossRouters.length) {
       await this.loadRoutersRule();
     }
   }
 
   public updateConfig(config: { dealerId: string | HexString }) {
-    this.crossRules = [];
+    this.crossRouters = [];
     this.dealerId = config.dealerId;
   }
 
@@ -39,13 +39,13 @@ export default class CrossRulesService {
     return this.instance;
   }
 
-  public async queryRulesAsync(): Promise<ICrossRule[]> {
+  public async queryRouters(): Promise<ICrossRule[]> {
     await this.checkLoading();
 
-    return this.crossRules;
+    return this.crossRouters;
   }
 
-  public async queryRouterRule(pairInfo: {
+  public async queryRouter(pairInfo: {
     dealerId: string | HexString;
     fromChainInfo: IChainInfo;
     toChainInfo: IChainInfo;
@@ -59,7 +59,7 @@ export default class CrossRulesService {
       return {} as ICrossRule;
     const filterPairId = `${fromChainInfo.chainId}/${toChainInfo.chainId}-${fromCurrency}/${toCurrency}`;
     const targetRule =
-      this.crossRules.find((item) => {
+      this.crossRouters.find((item) => {
         return item.line === filterPairId;
       }) || ({} as ICrossRule);
     return targetRule;

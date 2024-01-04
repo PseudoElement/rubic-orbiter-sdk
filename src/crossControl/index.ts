@@ -75,9 +75,10 @@ export default class CrossControl {
     const tokenAddress = selectMakerConfig.srcToken;
     const to = selectMakerConfig.endpoint;
     const fromChainTokens =
-      await TokenService.getInstance().getTokensByChainIdAsync(fromChainID);
-    const toChainTokens =
-      await TokenService.getInstance().getTokensByChainIdAsync(toChainID);
+      await TokenService.getInstance().queryTokensByChainId(fromChainID);
+    const toChainTokens = await TokenService.getInstance().queryTokensByChainId(
+      toChainID
+    );
     const fromTokenInfo = fromChainTokens.find(
       (item) => item.address === selectMakerConfig.srcToken
     );

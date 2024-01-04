@@ -16,15 +16,15 @@ describe.only("globalState tests", () => {
     expect(currentGlobalState.isMainnet).toBeTruthy();
 
     // test mainnet info
-    const mainnetChainInfo = (await orbiter.getChainsAsync())?.some(
+    const mainnetChainInfo = (await orbiter.queryChains())?.some(
       (v) => v.chainId === "1"
     );
     expect(mainnetChainInfo).toBeTruthy();
 
-    const mainnetTokensInfo = (await orbiter.getTokensAllChainAsync())["1"];
+    const mainnetTokensInfo = (await orbiter.queryTokensAllChain())["1"];
     expect(mainnetTokensInfo?.length).gt(0);
 
-    const mainnetRules = (await orbiter.queryRulesAsync()).some(
+    const mainnetRules = (await orbiter.queryRouters()).some(
       (v) => v.line === "1/534352-ETH/ETH"
     );
     expect(mainnetRules).toBeTruthy();

@@ -32,7 +32,7 @@ export default class ChainsService {
     this.chains = [];
   }
 
-  public async getChainInfoAsync(chain: number | string): Promise<IChainInfo> {
+  public async queryChainInfo(chain: number | string): Promise<IChainInfo> {
     await this.checkLoading();
 
     const currentChain = chain.toString();
@@ -47,7 +47,7 @@ export default class ChainsService {
     return chainInfo ?? ({} as IChainInfo);
   }
 
-  public async getChainsAsync(): Promise<IChainInfo[]> {
+  public async queryChains(): Promise<IChainInfo[]> {
     await this.checkLoading();
 
     return this.chains;

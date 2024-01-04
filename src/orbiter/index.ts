@@ -7,7 +7,7 @@ import { Account } from "starknet";
 import BigNumber from "bignumber.js";
 import { HexString } from "ethers-6/lib.commonjs/utils/data";
 import ChainsService from "../services/ChainsService";
-import CrossRulesService from "../services/CrossRulesService";
+import CrossRulesService from "../services/RoutersService";
 import TokenService from "../services/TokensService";
 import HistoryService from "../services/HistoryService";
 import RefundService from "../services/RefundService";
@@ -56,11 +56,11 @@ export default class Orbiter {
 
     this.chainsService = ChainsService.getInstance();
     this.tokensService = TokenService.getInstance();
-    this.crossRulesService = new CrossRulesService(this.dealerId);
-    this.historyService = new HistoryService(this.signer);
-    this.refundService = new RefundService(this.signer);
-
+    this.historyService = HistoryService.getInstance();
     this.crossControl = CrossControl.getInstance();
+
+    this.crossRulesService = new CrossRulesService(this.dealerId);
+    this.refundService = new RefundService(this.signer);
   }
 
   public static getInstance(): Orbiter {
@@ -83,7 +83,6 @@ export default class Orbiter {
       this.tokensService.updateConfig();
     }
 
-    this.historyService.updateConfig({ signer: this.signer });
     this.refundService.updateConfig({ signer: this.signer });
     this.crossRulesService.updateConfig({ dealerId: this.dealerId });
   };
@@ -113,15 +112,15 @@ export default class Orbiter {
     return setGlobalState(newState);
   };
 
-  getChainsAsync = async (): Promise<IChainInfo[]> => {
-    return await this.chainsService.getChainsAsync();
+  queryChains = async (): Promise<IChainInfo[]> => {
+    return await this.chainsService.queryChains();
   };
 
-  getChainInfoAsync = async (chainId: string | number): Promise<IChainInfo> => {
-    return await this.chainsService.getChainInfoAsync(chainId);
+  queryChainInfo = async (chainId: string | number): Promise<IChainInfo> => {
+    return await this.chainsService.queryChainInfo(chainId);
   };
 
-  getTokensDecimalsAsync = async (
+  queryTokensDecimals = async (
     chainId: string | number,
     token:
       | TTokenName
@@ -129,38 +128,38 @@ export default class Orbiter {
       | TSymbol
       | Array<TTokenName | TAddress | TSymbol>
   ) => {
-    return await this.tokensService.getTokensDecimalsAsync(chainId, token);
+    return await this.tokensService.queryTokensDecimals(chainId, token);
   };
 
-  getTokenAsync = async (
+  queryToken = async (
     chainId: string | number,
     token: TTokenName | TAddress | TSymbol
   ) => {
-    return await this.tokensService.getTokenAsync(chainId, token);
+    return await this.tokensService.queryToken(chainId, token);
   };
 
-  getTokensAllChainAsync = async (): Promise<ITokensByChain> => {
-    return await this.tokensService.getTokensAllChainAsync();
+  queryTokensAllChain = async (): Promise<ITokensByChain> => {
+    return await this.tokensService.queryTokensAllChain();
   };
 
-  getTokensByChainIdAsync = async (
+  queryTokensByChainId = async (
     chainId: string | number
   ): Promise<IToken[] | []> => {
-    return await this.tokensService.getTokensByChainIdAsync(chainId);
+    return await this.tokensService.queryTokensByChainId(chainId);
   };
 
-  queryRulesAsync = async (): Promise<ICrossRule[]> => {
-    return await this.crossRulesService.queryRulesAsync();
+  queryRouters = async (): Promise<ICrossRule[]> => {
+    return await this.crossRulesService.queryRouters();
   };
 
-  queryRouterRule = async (params: {
+  queryRouter = async (params: {
     dealerId: string | HexString;
     fromChainInfo: IChainInfo;
     toChainInfo: IChainInfo;
     fromCurrency: string;
     toCurrency: string;
   }): Promise<ICrossRule> => {
-    return await this.crossRulesService.queryRouterRule(params);
+    return await this.crossRulesService.queryRouter(params);
   };
 
   getHistoryListAsync = async (params: {
@@ -188,9 +187,7 @@ export default class Orbiter {
     isLoopring: boolean;
   }): Promise<TransactionResponse | ContractTransactionResponse> => {
     try {
-      const fromChainInfo = await this.getChainInfoAsync(
-        sendOptions.fromChainId
-      );
+      const fromChainInfo = await this.queryChainInfo(sendOptions.fromChainId);
 
       await isFromChainIdMatchProvider({ signer: this.signer, fromChainInfo });
       return await this.refundService.toSend(sendOptions);
@@ -221,15 +218,15 @@ export default class Orbiter {
         "should update loopring Signer by [generateLoopringSignerAndSetGlobalState] function."
       );
     }
-    const fromChainInfo = await this.getChainInfoAsync(fromChainID);
+    const fromChainInfo = await this.queryChainInfo(fromChainID);
 
     await isFromChainIdMatchProvider({ signer: this.signer, fromChainInfo });
 
-    const toChainInfo = await this.getChainInfoAsync(toChainID);
+    const toChainInfo = await this.queryChainInfo(toChainID);
     if (!fromChainInfo || !toChainInfo)
       throw new Error("Cant get ChainInfo by fromChainId or to toChainId.");
 
-    const selectMakerConfig = await this.queryRouterRule({
+    const selectMakerConfig = await this.queryRouter({
       dealerId: this.dealerId,
       fromChainInfo,
       toChainInfo,

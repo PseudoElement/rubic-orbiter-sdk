@@ -152,7 +152,7 @@ export async function queryTokens(): Promise<{ [k: string]: ITokenItem[] }> {
   }
 }
 
-export async function queryRouters(
+export async function queryRouter(
   dealerId?: string | HexString
 ): Promise<ICrossRule[]> {
   try {

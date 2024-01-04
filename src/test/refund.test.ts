@@ -140,10 +140,7 @@ describe("orbiter tests", () => {
       PRIVATE_KEY,
       GOERLI_RPC_URL
     );
-    const tokenInfo: IToken = await orbiter.getTokenAsync(
-      "loopring_test",
-      "ETH"
-    );
+    const tokenInfo: IToken = await orbiter.queryToken("loopring_test", "ETH");
     const { address } = tokenInfo;
     expect(address).toBeDefined();
     const loopringRefundOptions = {

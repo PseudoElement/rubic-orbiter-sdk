@@ -39,17 +39,17 @@ export default class TokensService {
     this.tokens = {};
   }
 
-  public async getTokensAllChainAsync() {
+  public async queryTokensAllChain() {
     await this.checkLoading();
     return this.tokens;
   }
 
-  public async getTokensByChainIdAsync(chainId: string | number) {
+  public async queryTokensByChainId(chainId: string | number) {
     await this.checkLoading();
     return this.tokens[String(chainId)] || [];
   }
 
-  public async getTokensDecimalsAsync(
+  public async queryTokensDecimals(
     chainId: string | number,
     token:
       | TTokenName
@@ -81,14 +81,14 @@ export default class TokensService {
     return findDecimals(token);
   }
 
-  public async getTokenAsync(
+  public async queryToken(
     chainId: string | number,
     token: TTokenName | TAddress | TSymbol
   ) {
     await this.checkLoading();
     const targetChainTokensInfo = this.tokens[String(chainId)] || [];
     if (!targetChainTokensInfo.length)
-      return throwNewError("getTokenAsync tokens is empry.");
+      return throwNewError("queryToken tokens is empry.");
 
     const findToken = (token: TTokenName | TAddress | TSymbol) => {
       return targetChainTokensInfo.find((item: IToken) => {

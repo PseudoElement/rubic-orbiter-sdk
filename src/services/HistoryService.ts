@@ -8,16 +8,15 @@ import { Signer } from "ethers-6";
 import { Account } from "starknet";
 
 export default class HistoryService {
-  private signer: Account | Signer;
+  private static instance: HistoryService;
 
-  constructor(signer: Account | Signer) {
-    this.signer = signer;
+  public static getInstance(): HistoryService {
+    if (!this.instance) {
+      this.instance = new HistoryService();
+    }
+
+    return this.instance;
   }
-
-  public updateConfig(config: { signer: Account | Signer }) {
-    this.signer = config.signer;
-  }
-
   public async queryHistoryList(params: {
     account: string;
     pageNum: number;

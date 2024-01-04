@@ -43,15 +43,10 @@ export default class RefundService {
     const { to, amount, token, fromChainId, isLoopring } = params;
     if (!to || !amount || !token) return throwNewError("toSend params error.");
     let account: string | Promise<string>;
-    const tokenInfo = await this.tokensService.getTokenAsync(
-      fromChainId,
-      token
-    );
+    const tokenInfo = await this.tokensService.queryToken(fromChainId, token);
     if (!tokenInfo) return throwNewError("Without tokenInfo.");
 
-    const fromChainInfo = await this.chainsService.getChainInfoAsync(
-      fromChainId
-    );
+    const fromChainInfo = await this.chainsService.queryChainInfo(fromChainId);
     if (isLoopring) {
       const webSigner = getGlobalState().loopringSigner;
       const account = await webSigner.eth.getAccounts();

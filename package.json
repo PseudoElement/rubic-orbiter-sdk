@@ -1,5 +1,5 @@
 {
-  "name": "orbiter-bridge-sdk",
+  "name": "orbiter-sdk",
   "version": "1.0.1",
   "description": "Orbiter cross rollup SDK",
   "main": "./dist/cjs/index.js",
