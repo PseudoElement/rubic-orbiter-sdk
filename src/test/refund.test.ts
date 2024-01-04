@@ -54,7 +54,7 @@ describe("orbiter tests", () => {
     };
     let result;
     try {
-      result = await orbiter.toRefund(starknetRefundConfig);
+      result = await orbiter.toRefund<TStarknetResponse>(starknetRefundConfig);
     } catch (error: any) {
       expect(error.message).eq(
         "current signer is not match with the source chain."
