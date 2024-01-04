@@ -1,8 +1,9 @@
 import { Signer, Contract, ethers } from "ethers-6";
 import { Coin_ABI } from "./constant/common";
-import { IChainInfo, ICrossRule, IToken } from "./types";
+import { IChainInfo, ICrossRule, IToken, STARKNET_CHAIN_ID } from "./types";
 import BigNumber from "bignumber.js";
 import { queryRatesByCurrency } from "./services/ApiService";
+import { getGlobalState } from "./globalState";
 
 export const approveAndAllowanceCheck = async (params: {
   contractInstance: Contract;
@@ -207,5 +208,81 @@ export const formatDate = (date: Date | string, isShort?: boolean): string => {
     return mon + "-" + data + " " + hour + ":" + min + ":" + seon;
   } else {
     return year + "-" + mon + "-" + data + " " + hour + ":" + min;
+  }
+};
+
+export const getActiveSigner = <T>(): T => {
+  const { activeSignerType, evmSigner, loopringSigner, starknetSigner } =
+    getGlobalState();
+  switch (activeSignerType) {
+    case "EVM":
+      if (!Object.keys(evmSigner).length)
+        return throwNewError("Evm signer is empty by getActiveSigner.");
+      return evmSigner as T;
+
+    case "Loopring":
+      if (!Object.keys(loopringSigner).length)
+        return throwNewError("Loopring signer is empty.");
+      return loopringSigner as T;
+
+    case "Starknet":
+      if (!Object.keys(starknetSigner).length)
+        return throwNewError("Starknet signer is empty.");
+      return starknetSigner as T;
+
+    default:
+      return throwNewError("Can not find signer, please check it!");
+  }
+};
+
+export const getActiveAccount = async () => {
+  const { activeSignerType, evmSigner, loopringSigner, starknetSigner } =
+    getGlobalState();
+  switch (activeSignerType) {
+    case "EVM":
+      if (!Object.keys(evmSigner).length)
+        return throwNewError("Evm signer is empty by getActiveAccount.");
+      return await evmSigner.getAddress();
+
+    case "Loopring":
+      if (!Object.keys(loopringSigner).length)
+        return throwNewError("Loopring signer is empty.");
+      const accounts = await loopringSigner.eth.getAccounts();
+      if (!accounts.length)
+        return throwNewError("Loopring`s accounts is empty.");
+      return accounts[0];
+
+    case "Starknet":
+      if (!Object.keys(starknetSigner).length)
+        return throwNewError("Starknet signer is empty.");
+      return starknetSigner.address;
+
+    default:
+      return throwNewError("Can not find signer, please check it!");
+  }
+};
+
+export const getActiveChainId = async () => {
+  const { activeSignerType, evmSigner, loopringSigner, isMainnet } =
+    getGlobalState();
+  switch (activeSignerType) {
+    case "EVM":
+      if (!Object.keys(evmSigner).length)
+        return throwNewError("Evm signer is empty by getActiveChainId.");
+      const currentNetwork = await evmSigner.provider?.getNetwork();
+      return currentNetwork?.chainId || 0n;
+
+    case "Loopring":
+      if (!Object.keys(loopringSigner).length)
+        return throwNewError("Loopring signer is empty.");
+      return BigInt(await loopringSigner.eth.net.getId());
+
+    case "Starknet":
+      return isMainnet
+        ? STARKNET_CHAIN_ID.mainnetId
+        : STARKNET_CHAIN_ID.testnetId;
+
+    default:
+      return throwNewError("Can not find signer, please check it!");
   }
 };

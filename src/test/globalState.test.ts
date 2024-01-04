@@ -10,9 +10,6 @@ describe.only("globalState tests", () => {
 
   test("setGlobalState test", async () => {
     const currentGlobalState = orbiter.getGlobalState();
-    expect(currentGlobalState.isMainnet).toBeFalsy();
-
-    orbiter.updateConfig({ isMainnet: true });
     expect(currentGlobalState.isMainnet).toBeTruthy();
 
     // test mainnet info
@@ -28,5 +25,8 @@ describe.only("globalState tests", () => {
       (v) => v.line === "1/534352-ETH/ETH"
     );
     expect(mainnetRules).toBeTruthy();
+
+    orbiter.updateConfig({ isMainnet: false });
+    expect(currentGlobalState.isMainnet).toBeFalsy();
   });
 });

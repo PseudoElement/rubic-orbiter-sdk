@@ -14,6 +14,7 @@ import {
   isExecuteOrbiterRouterV3,
 } from "../orbiter/utils";
 import {
+  getActiveAccount,
   getContract,
   getContractAddressByType,
   getRealTransferValue,
@@ -60,7 +61,7 @@ export default class CrossControl {
   }
 
   private async initCrossFunctionConfig(
-    signer: Signer | Account,
+    signer: Signer | Account | Web3,
     crossParams: ICrossFunctionParams
   ) {
     this.signer = signer;
@@ -117,8 +118,7 @@ export default class CrossControl {
         to,
         tradeFee,
         tValue,
-        account:
-          "address" in signer ? signer.address : await signer?.getAddress(),
+        account: await getActiveAccount(),
       };
     } catch (error) {
       throwNewError("init cross config error.", error);
@@ -126,7 +126,7 @@ export default class CrossControl {
   }
 
   public async getCrossFunction<T extends TBridgeResponse>(
-    signer: Signer | Account,
+    signer: Signer | Account | Web3,
     crossParams: ICrossFunctionParams
   ): Promise<T> {
     await this.initCrossFunctionConfig(signer, crossParams);
@@ -412,7 +412,7 @@ export default class CrossControl {
     const loopringSigner: Web3 = getGlobalState().loopringSigner;
     if (!Object.keys(loopringSigner).length) {
       return throwNewError(
-        "should update loopringSigner by [generateLoopringSignerAndSetGlobalState] function."
+        "should update loopringSigner by [updateConfig] function."
       );
     }
     try {

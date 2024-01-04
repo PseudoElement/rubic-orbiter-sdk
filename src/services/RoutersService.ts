@@ -2,14 +2,15 @@ import { queryRouter } from "./ApiService";
 import { IChainInfo, ICrossRule } from "../types";
 import { throwNewError } from "../utils";
 import { HexString } from "ethers-6/lib.commonjs/utils/data";
+import { getGlobalState } from "../globalState";
 
 export default class CrossRulesService {
   private static instance: CrossRulesService;
   private dealerId: string | HexString;
   private crossRouters: ICrossRule[] = [];
 
-  constructor(dealerId?: string | HexString) {
-    this.dealerId = dealerId || "";
+  constructor() {
+    this.dealerId = getGlobalState().dealerId;
   }
 
   private async loadRoutersRule(): Promise<void> {
@@ -26,9 +27,9 @@ export default class CrossRulesService {
     }
   }
 
-  public updateConfig(config: { dealerId: string | HexString }) {
+  public updateConfig() {
     this.crossRouters = [];
-    this.dealerId = config.dealerId;
+    this.dealerId = getGlobalState().dealerId;
   }
 
   public static getInstance(): CrossRulesService {
@@ -46,7 +47,6 @@ export default class CrossRulesService {
   }
 
   public async queryRouter(pairInfo: {
-    dealerId: string | HexString;
     fromChainInfo: IChainInfo;
     toChainInfo: IChainInfo;
     fromCurrency: string;

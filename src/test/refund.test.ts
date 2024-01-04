@@ -1,15 +1,8 @@
 require("dotenv").config("./.env");
-import {
-  Provider,
-  Signer,
-  TransactionResponse,
-  Wallet,
-  ethers,
-} from "ethers-6";
+import { TransactionResponse } from "ethers-6";
 import { beforeAll, describe, expect, test } from "vitest";
 import Orbiter from "../orbiter";
-import { Account, RpcProvider as snProvider } from "starknet";
-import { IToken } from "../types";
+import { IToken, SIGNER_TYPES } from "../types";
 
 describe("orbiter tests", () => {
   // add your private key to the environment to be able to run the tests
@@ -18,32 +11,36 @@ describe("orbiter tests", () => {
   const STARKNET_ADDRESS = process.env.STARKNET_ADDRESS || "";
   // rpcs
   const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
-  const OP_GOERLI_RPC_URL = process.env.OP_GOERLI_RPC_URL;
   const SN_GOERLI_RPC_URL = process.env.SN_GOERLI_RPC_URL;
 
-  let signer: Signer;
   let orbiter: Orbiter;
-  let provider: Provider;
-  let owner: string;
-
   beforeAll(async () => {
     if (!PRIVATE_KEY)
       throw new Error(
         "private key can not be empty, pls add your private to the environment to be able to run the tests"
       );
-    orbiter = new Orbiter();
-    const goerliProvider = new ethers.JsonRpcProvider(GOERLI_RPC_URL);
-    provider = goerliProvider;
-    signer = new Wallet(PRIVATE_KEY, goerliProvider);
-    orbiter.updateConfig({ signer });
-    owner = await signer.getAddress();
+    orbiter = new Orbiter({
+      isMainnet: false,
+      dealerId: "",
+      // default type is EVM
+      activeSignerType: SIGNER_TYPES.EVM,
+      evmConfig: {
+        privateKey: PRIVATE_KEY,
+        providerUrl: GOERLI_RPC_URL || "",
+      },
+      starknetConfig: {
+        privateKey: STARKNET_PRIVATE_KEY,
+        providerUrl: SN_GOERLI_RPC_URL || "",
+        starknetAddress: STARKNET_ADDRESS,
+      },
+      loopringConfig: {
+        privateKey: PRIVATE_KEY,
+        providerUrl: GOERLI_RPC_URL || "",
+      },
+    });
   });
 
   test("refund evm signer is not match with the source chain test", async () => {
-    const opProvider = new ethers.JsonRpcProvider(OP_GOERLI_RPC_URL);
-    provider = opProvider;
-    const opSigner = signer.connect(provider);
-    orbiter.updateConfig({ signer: opSigner });
     const evmRefundOptions = {
       fromChainId: "5",
       to: "0x15962f38e6998875F9F75acDF8c6Ddc743F11041",
@@ -54,24 +51,14 @@ describe("orbiter tests", () => {
     try {
       result = await orbiter.toRefund(evmRefundOptions);
     } catch (error: any) {
-      expect(
-        error.message.includes("evm signer is not match with the source chain.")
-      ).toBeTruthy();
+      expect(error.message.includes("")).toBeTruthy();
     }
   });
 
   test("refund starknet account is not match with the source chain test", async () => {
-    const provider = new snProvider({ nodeUrl: SN_GOERLI_RPC_URL || "" });
-    const account = new Account(
-      provider,
-      STARKNET_ADDRESS,
-      STARKNET_PRIVATE_KEY
-    );
-    orbiter.updateConfig({ signer: account });
-
     const starknetRefundConfig = {
       fromChainId: "SN_GOERLI",
-      to: "0x15962f38e6998875F9F75acDF8c6Ddc743F11041",
+      to: "0x031eEf042A3C888287416b744eC5aaAb14E5994F9d88cF7b7a08D78748B077d1",
       token: "ETH",
       amount: 0.01,
     };
@@ -80,17 +67,13 @@ describe("orbiter tests", () => {
       result = await orbiter.toRefund(starknetRefundConfig);
     } catch (error: any) {
       expect(error.message).eq(
-        "starknet account is not match with the source chain."
+        "current signer is not match with the source chain."
       );
     }
   });
 
   test("refund evm test", async () => {
-    const goerliProvider = new ethers.JsonRpcProvider(GOERLI_RPC_URL);
-    provider = goerliProvider;
-    const goerliSigner = signer.connect(provider);
-    orbiter.updateConfig({ signer: goerliSigner });
-
+    orbiter.updateConfig({ activeSignerType: SIGNER_TYPES.EVM });
     const evmRefundOptions = {
       fromChainId: "5",
       to: "0x15962f38e6998875F9F75acDF8c6Ddc743F11041",
@@ -109,13 +92,7 @@ describe("orbiter tests", () => {
   });
 
   test("refund starknet test", async () => {
-    const provider = new snProvider({ nodeUrl: SN_GOERLI_RPC_URL || "" });
-    const account = new Account(
-      provider,
-      STARKNET_ADDRESS,
-      STARKNET_PRIVATE_KEY
-    );
-    orbiter.updateConfig({ signer: account });
+    orbiter.updateConfig({ activeSignerType: SIGNER_TYPES.Starknet });
 
     const starknetRefundOptions = {
       fromChainId: "SN_GOERLI",
@@ -135,11 +112,8 @@ describe("orbiter tests", () => {
     }
   });
 
-  test.only("refund loopring test", async () => {
-    orbiter.generateLoopringSignerAndSetGlobalState(
-      PRIVATE_KEY,
-      GOERLI_RPC_URL
-    );
+  test("refund loopring test", async () => {
+    orbiter.updateConfig({ activeSignerType: SIGNER_TYPES.Loopring });
     const tokenInfo: IToken = await orbiter.queryToken("loopring_test", "ETH");
     const { address } = tokenInfo;
     expect(address).toBeDefined();

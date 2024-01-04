@@ -1,8 +1,14 @@
-import { IGlobalState } from "./types";
+import { Signer } from "ethers-6";
+import { IGlobalState, SIGNER_TYPES } from "./types";
 import Web3 from "web3";
+import { Account } from "starknet";
 
 let globalState: IGlobalState = {
-  isMainnet: false,
+  isMainnet: true,
+  dealerId: "",
+  activeSignerType: SIGNER_TYPES.EVM,
+  evmSigner: {} as Signer,
+  starknetSigner: {} as Account,
   loopringSigner: {} as Web3,
 };
 

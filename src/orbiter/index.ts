@@ -1,9 +1,10 @@
 import {
   ContractTransactionResponse,
-  Signer,
   TransactionResponse,
+  Wallet,
+  ethers,
 } from "ethers-6";
-import { Account } from "starknet";
+import { Account, RpcProvider } from "starknet";
 import BigNumber from "bignumber.js";
 import { HexString } from "ethers-6/lib.commonjs/utils/data";
 import ChainsService from "../services/ChainsService";
@@ -15,9 +16,12 @@ import CrossControl from "../crossControl";
 import {
   IChainInfo,
   ICrossRule,
+  TEvmConfig,
   IGlobalState,
+  TLoopringConfig,
   IOBridgeConfig,
   ISearchTxResponse,
+  TStarknetConfig,
   IToken,
   ITokensByChain,
   ITransactionInfo,
@@ -25,20 +29,18 @@ import {
   TAddress,
   TBridgeResponse,
   TSymbol,
+  SIGNER_TYPES,
   TTokenName,
 } from "../types";
-import { throwNewError } from "../utils";
+import { getActiveSigner, throwNewError } from "../utils";
 import { isFromChainIdMatchProvider } from "./utils";
 import { getGlobalState, setGlobalState } from "../globalState";
 import HDWalletProvider from "@truffle/hdwallet-provider";
-import { isArray } from "lodash";
 import { CHAIN_ID_MAINNET, CHAIN_ID_TESTNET } from "../constant/common";
 import Web3 from "web3";
 
 export default class Orbiter {
   private static instance: Orbiter;
-  private signer: Signer | Account;
-  private dealerId: string | HexString;
 
   private chainsService: ChainsService;
   private tokensService: TokenService;
@@ -48,20 +50,70 @@ export default class Orbiter {
 
   private crossControl: CrossControl;
 
-  constructor(config?: IOBridgeConfig) {
-    this.signer = config?.signer || ({} as Signer | Account);
-    this.dealerId = config?.dealerId || "";
-
-    setGlobalState({ isMainnet: config?.isMainnet || false });
+  constructor(config?: Partial<IOBridgeConfig>) {
+    setGlobalState({
+      isMainnet: config?.isMainnet ?? true,
+      dealerId: config?.dealerId || "",
+      activeSignerType: config?.activeSignerType || SIGNER_TYPES.EVM,
+      evmSigner: this.generateSigner<TEvmConfig>(
+        SIGNER_TYPES.EVM,
+        config?.evmConfig
+      ),
+      loopringSigner: this.generateSigner<TLoopringConfig>(
+        SIGNER_TYPES.Loopring,
+        config?.loopringConfig
+      ),
+      starknetSigner: this.generateSigner<TStarknetConfig>(
+        SIGNER_TYPES.Starknet,
+        config?.starknetConfig
+      ),
+    });
 
     this.chainsService = ChainsService.getInstance();
     this.tokensService = TokenService.getInstance();
     this.historyService = HistoryService.getInstance();
     this.crossControl = CrossControl.getInstance();
-
-    this.crossRulesService = new CrossRulesService(this.dealerId);
-    this.refundService = new RefundService(this.signer);
+    this.crossRulesService = CrossRulesService.getInstance();
+    this.refundService = RefundService.getInstance();
   }
+
+  private generateSigner = <
+    T extends TStarknetConfig | TLoopringConfig | TEvmConfig
+  >(
+    type: SIGNER_TYPES,
+    config?: T
+  ): T["signer"] => {
+    if (!config || !Object.keys(config).length) return {} as T["signer"];
+
+    const { signer, privateKey, providerUrl, starknetAddress } = config;
+
+    if (signer && Object.keys(signer).length) return signer;
+
+    switch (type) {
+      case SIGNER_TYPES.EVM:
+        return privateKey && providerUrl
+          ? new Wallet(privateKey, new ethers.JsonRpcProvider(providerUrl))
+          : ({} as T["signer"]);
+
+      case SIGNER_TYPES.Loopring:
+        Web3.providers.HttpProvider.prototype.sendAsync =
+          Web3.providers.HttpProvider.prototype.send;
+        const hdSigner: any = new HDWalletProvider({
+          privateKeys: [privateKey],
+          providerOrUrl: providerUrl,
+        });
+        return new Web3(hdSigner);
+
+      case SIGNER_TYPES.Starknet:
+        const provider = new RpcProvider({ nodeUrl: providerUrl || "" });
+        return starknetAddress
+          ? new Account(provider, starknetAddress, privateKey)
+          : ({} as T["signer"]);
+
+      default:
+        return {} as T["signer"];
+    }
+  };
 
   public static getInstance(): Orbiter {
     if (!this.instance) {
@@ -72,36 +124,38 @@ export default class Orbiter {
   }
 
   updateConfig = (config: Partial<IOBridgeConfig>): void => {
-    this.signer = config.signer ?? this.signer;
-    this.dealerId = config.dealerId ?? this.dealerId;
-
-    if (config.hasOwnProperty("isMainnet")) {
-      setGlobalState({
-        isMainnet: config.isMainnet ?? getGlobalState().isMainnet,
-      });
-      this.chainsService.updateConfig();
-      this.tokensService.updateConfig();
-    }
-
-    this.refundService.updateConfig({ signer: this.signer });
-    this.crossRulesService.updateConfig({ dealerId: this.dealerId });
-  };
-
-  generateLoopringSignerAndSetGlobalState = (
-    privateKeys: string | string[],
-    web3ProviderOrURL: any | string
-  ): void => {
-    Web3.providers.HttpProvider.prototype.sendAsync =
-      Web3.providers.HttpProvider.prototype.send;
-
-    const hdSigner: any = new HDWalletProvider({
-      privateKeys: isArray(privateKeys) ? privateKeys : [privateKeys],
-      providerOrUrl: web3ProviderOrURL,
-    });
-
+    const {
+      isMainnet,
+      dealerId,
+      activeSignerType,
+      evmSigner,
+      starknetSigner,
+      loopringSigner,
+    } = getGlobalState();
     setGlobalState({
-      loopringSigner: new Web3(hdSigner),
+      isMainnet: config.isMainnet ?? isMainnet,
+      dealerId: config?.dealerId || dealerId,
+      activeSignerType: config?.activeSignerType || activeSignerType,
+      evmSigner: config?.evmConfig
+        ? this.generateSigner<TEvmConfig>(SIGNER_TYPES.EVM, config?.evmConfig)
+        : evmSigner,
+      loopringSigner: config?.loopringConfig
+        ? this.generateSigner<TLoopringConfig>(
+            SIGNER_TYPES.Loopring,
+            config?.loopringConfig
+          )
+        : loopringSigner,
+      starknetSigner: config?.starknetConfig
+        ? this.generateSigner<TStarknetConfig>(
+            SIGNER_TYPES.Starknet,
+            config?.starknetConfig
+          )
+        : starknetSigner,
     });
+
+    this.chainsService.updateConfig();
+    this.tokensService.updateConfig();
+    this.crossRulesService.updateConfig();
   };
 
   getGlobalState = (): IGlobalState => {
@@ -184,23 +238,24 @@ export default class Orbiter {
     amount: number | string;
     token: TTokenName | TAddress | TSymbol;
     fromChainId: string | number;
-    isLoopring: boolean;
+    isLoopring?: boolean;
   }): Promise<TransactionResponse | ContractTransactionResponse> => {
     try {
       const fromChainInfo = await this.queryChainInfo(sendOptions.fromChainId);
 
-      await isFromChainIdMatchProvider({ signer: this.signer, fromChainInfo });
+      await isFromChainIdMatchProvider(fromChainInfo);
       return await this.refundService.toSend(sendOptions);
     } catch (error: any) {
       console.log(error);
-      return throwNewError("toRefund function error", error.message);
+      return throwNewError(error.message);
     }
   };
 
   toBridge = async <T extends TBridgeResponse>(
     transferConfig: ITransferConfig
   ): Promise<T> => {
-    if (!this.signer) throw new Error("Can not find signer, please check it!");
+    if (!getActiveSigner())
+      throw new Error("Can not find signer, please check it!");
     const {
       fromChainID,
       fromCurrency,
@@ -215,19 +270,19 @@ export default class Orbiter {
       !Object.keys(getGlobalState().loopringSigner).length
     ) {
       return throwNewError(
-        "should update loopring Signer by [generateLoopringSignerAndSetGlobalState] function."
+        "should update loopring Signer by [updateConfig] function."
       );
     }
     const fromChainInfo = await this.queryChainInfo(fromChainID);
 
-    await isFromChainIdMatchProvider({ signer: this.signer, fromChainInfo });
+    await isFromChainIdMatchProvider(fromChainInfo);
 
     const toChainInfo = await this.queryChainInfo(toChainID);
     if (!fromChainInfo || !toChainInfo)
       throw new Error("Cant get ChainInfo by fromChainId or to toChainId.");
 
     const selectMakerConfig = await this.queryRouter({
-      dealerId: this.dealerId,
+      dealerId: getGlobalState().dealerId,
       fromChainInfo,
       toChainInfo,
       fromCurrency,
@@ -246,7 +301,7 @@ export default class Orbiter {
       );
 
     try {
-      return await this.crossControl.getCrossFunction<T>(this.signer, {
+      return await this.crossControl.getCrossFunction<T>(getActiveSigner(), {
         ...transferConfig,
         fromChainInfo,
         toChainInfo,

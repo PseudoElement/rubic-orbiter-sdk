@@ -4,14 +4,36 @@ import {
   TransactionResponse,
 } from "ethers-6";
 import { HexString } from "ethers-6/lib.commonjs/utils/data";
-import { Account } from "starknet";
+import { Account, InvokeFunctionResponse } from "starknet";
 import { Transaction } from "zksync";
 import Web3 from "web3";
 
+export interface ISignerConfig<T> {
+  signer?: T;
+  privateKey: string | HexString;
+  providerUrl: string;
+  starknetAddress?: string;
+}
+
+export type TEvmConfig = ISignerConfig<Signer>;
+
+export type TStarknetConfig = ISignerConfig<Account>;
+
+export type TLoopringConfig = ISignerConfig<Web3>;
+
+export enum SIGNER_TYPES {
+  EVM = "EVM",
+  Loopring = "Loopring",
+  Starknet = "Starknet",
+}
+
 export interface IOBridgeConfig {
-  signer: Signer | Account;
   dealerId: string | HexString;
   isMainnet: boolean;
+  activeSignerType: SIGNER_TYPES;
+  evmConfig: TEvmConfig;
+  starknetConfig: TStarknetConfig;
+  loopringConfig: TLoopringConfig;
 }
 
 export interface Rates {
@@ -142,7 +164,10 @@ export type TCrossConfig = ICrossFunctionParams & {
   };
 };
 
-export const STARKNET_CHAIN_ID = ["SN_MAIN", "SN_GOERLI"];
+export const STARKNET_CHAIN_ID = {
+  mainnetId: "SN_MAIN",
+  testnetId: "SN_GOERLI",
+};
 
 export enum StarknetChainId {
   SN_MAIN = "0x534e5f4d41494e",
@@ -201,12 +226,15 @@ export type ILoopringResponse = {
   };
 };
 
+export type TStarknetResponse = InvokeFunctionResponse;
+
 export type TBridgeResponse =
   | TContractTransactionResponse
   | TTransactionResponse
   | TTransaction
   | TIMXTransactionResponse
-  | ILoopringResponse;
+  | ILoopringResponse
+  | TStarknetResponse;
 
 export interface IChainItem {
   chainId: string;
@@ -263,9 +291,13 @@ export type TRouterResult = IV3Result & {
 };
 
 export interface IGlobalState {
-  [k: string]: boolean | Web3;
+  [k: string]: boolean | Web3 | Signer | Account | string;
   isMainnet: boolean;
+  dealerId: string;
+  activeSignerType: "EVM" | "Loopring" | "Starknet";
   loopringSigner: Web3;
+  evmSigner: Signer;
+  starknetSigner: Account;
 }
 interface PublicKey {
   /**

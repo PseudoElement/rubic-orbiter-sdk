@@ -2,7 +2,9 @@ import { describe, expect, test } from "vitest";
 import Orbiter from "../orbiter";
 
 describe("token tests", () => {
-  let orbiter: Orbiter = new Orbiter();
+  let orbiter: Orbiter = new Orbiter({
+    isMainnet: false,
+  });
 
   test("get all chain tokens test", async () => {
     const result = await orbiter.queryTokensAllChain();

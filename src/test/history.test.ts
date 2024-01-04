@@ -1,32 +1,35 @@
 require("dotenv").config("./.env");
-import { Provider, Signer, Wallet, ethers } from "ethers-6";
 import { beforeAll, describe, expect, test } from "vitest";
 import Orbiter from "../orbiter";
+import { SIGNER_TYPES } from "../types";
 
 describe.only("bridge tests", () => {
   // add your private key to the environment to be able to run the tests
   const PRIVATE_KEY = process.env.PRIVATE_KEY;
   const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
 
-  let signer: Signer;
   let orbiter: Orbiter;
-  let provider: Provider;
 
   beforeAll(async () => {
     if (!PRIVATE_KEY || !GOERLI_RPC_URL)
       throw new Error(
         "private key can not be empty, pls add your private to the environment to be able to run the tests"
       );
-    orbiter = new Orbiter();
-    const goerliProvider = new ethers.JsonRpcProvider(GOERLI_RPC_URL);
-    provider = goerliProvider;
-    signer = new Wallet(PRIVATE_KEY, goerliProvider);
-    orbiter.updateConfig({ signer });
+    orbiter = new Orbiter({
+      isMainnet: false,
+      dealerId: "",
+      // default type is EVM
+      activeSignerType: SIGNER_TYPES.EVM,
+      evmConfig: {
+        privateKey: PRIVATE_KEY,
+        providerUrl: GOERLI_RPC_URL || "",
+      },
+    });
   });
 
   test("get all history test", async () => {
     const result = await orbiter.getHistoryListAsync({
-      account: await signer.getAddress(),
+      account: "0x15962f38e6998875F9F75acDF8c6Ddc743F11041",
       pageNum: 10,
       pageSize: 1,
     });
@@ -43,7 +46,7 @@ describe.only("bridge tests", () => {
     expect(result?.sourceId).is.string;
   });
 
-  test.only("searchTransaction is not found test", async () => {
+  test("searchTransaction is not found test", async () => {
     const goerliToStarknetGoerliHash = `0x${"3".repeat(64)}`;
 
     const result = await orbiter.searchTransaction(goerliToStarknetGoerliHash);

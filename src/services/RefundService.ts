@@ -1,7 +1,7 @@
 import {
   equalsIgnoreCase,
+  getActiveSigner,
   getContract,
-  isEthTokenAddress,
   throwNewError,
 } from "../utils";
 import { Signer, ethers } from "ethers-6";
@@ -10,25 +10,26 @@ import ChainsService from "./ChainsService";
 import TokensService from "./TokensService";
 import { IChainInfo, IToken, TAddress, TSymbol, TTokenName } from "../types";
 import { STARKNET_ERC20_ABI } from "../constant/abi";
-import { getTransferValue } from "../orbiter/utils";
-import BigNumber from "bignumber.js";
 import Web3 from "web3";
 import { getGlobalState } from "../globalState";
 import loopring from "../crossControl/loopring";
 
 export default class RefundService {
-  private signer: Account | Signer;
   private chainsService: ChainsService;
   private tokensService: TokensService;
+  private static instance: RefundService;
 
-  constructor(signer: Account | Signer) {
-    this.signer = signer;
+  constructor() {
     this.chainsService = ChainsService.getInstance();
     this.tokensService = TokensService.getInstance();
   }
 
-  public updateConfig(config: { signer: Account | Signer }) {
-    this.signer = config.signer;
+  public static getInstance(): RefundService {
+    if (!this.instance) {
+      this.instance = new RefundService();
+    }
+
+    return this.instance;
   }
 
   public async toSend(params: {
@@ -36,9 +37,10 @@ export default class RefundService {
     amount: number | string;
     token: TTokenName | TAddress | TSymbol;
     fromChainId: string | number;
-    isLoopring: boolean;
+    isLoopring?: boolean;
   }): Promise<any> {
-    if (!Object.keys(this.signer).length)
+    const currentSigner = getActiveSigner<Web3 | Signer | Account>();
+    if (!Object.keys(currentSigner).length)
       return throwNewError("can not send transfer without signer.");
     const { to, amount, token, fromChainId, isLoopring } = params;
     if (!to || !amount || !token) return throwNewError("toSend params error.");
@@ -48,8 +50,7 @@ export default class RefundService {
 
     const fromChainInfo = await this.chainsService.queryChainInfo(fromChainId);
     if (isLoopring) {
-      const webSigner = getGlobalState().loopringSigner;
-      const account = await webSigner.eth.getAccounts();
+      const account = await getActiveSigner<Web3>().eth.getAccounts();
       if (!account) return throwNewError("loopring refund`s account is error.");
       const options = {
         to,
@@ -62,8 +63,8 @@ export default class RefundService {
       };
       return await this.sendToLoopring(options);
     }
-    if ("getAddress" in this.signer) {
-      account = await this.signer.getAddress();
+    if ("getAddress" in currentSigner) {
+      account = await currentSigner.getAddress();
       return await this.sendToEvm({
         to,
         amount,
@@ -73,8 +74,8 @@ export default class RefundService {
         tokenInfo,
         fromChainInfo,
       });
-    } else if ("address" in this.signer) {
-      account = this.signer.address;
+    } else if ("address" in currentSigner) {
+      account = currentSigner.address;
       return await this.sendToStarknet({
         to,
         amount,
@@ -97,7 +98,7 @@ export default class RefundService {
     const loopringSigner: Web3 = getGlobalState().loopringSigner;
     if (!Object.keys(loopringSigner).length) {
       return throwNewError(
-        "should update loopringSigner by [generateLoopringSignerAndSetGlobalState] function."
+        "should update loopringSigner by updateConfig function."
       );
     }
     try {
@@ -133,7 +134,7 @@ export default class RefundService {
     amount: number | string;
     token: TTokenName | TAddress | TSymbol;
   }) {
-    const currentSigner = this.signer as Account;
+    const currentSigner = getActiveSigner<Account>();
     const { account, to, amount, token } = options;
     const erc20Contract = new Contract(
       STARKNET_ERC20_ABI,
@@ -165,7 +166,7 @@ export default class RefundService {
     tokenInfo: IToken;
     fromChainInfo: IChainInfo;
   }) {
-    const currentSigner = this.signer as Signer;
+    const currentSigner = getActiveSigner<Signer>();
     const {
       account,
       to,
@@ -182,7 +183,7 @@ export default class RefundService {
     if (
       equalsIgnoreCase(fromChainInfo.nativeCurrency.address, tokenInfo.address)
     ) {
-      gasLimit = await (this.signer as Signer).estimateGas({
+      gasLimit = await getActiveSigner<Signer>().estimateGas({
         from: account,
         to,
         value,

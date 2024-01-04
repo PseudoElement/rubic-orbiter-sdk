@@ -4,20 +4,12 @@ import {
   MAX_BITS,
   SIZE_OP,
 } from "../constant/common";
-import {
-  IChainInfo,
-  ICrossRule,
-  IRates,
-  IToken,
-  STARKNET_CHAIN_ID,
-} from "../types";
+import { IChainInfo, ICrossRule, IRates, IToken } from "../types";
 import BigNumber from "bignumber.js";
-import { equalsIgnoreCase, throwNewError } from "../utils";
+import { equalsIgnoreCase, getActiveChainId, throwNewError } from "../utils";
 import * as zksync from "zksync";
 import { queryRates } from "../services/ApiService";
 import { isObject } from "lodash";
-import { Account } from "starknet";
-import { Signer } from "ethers-6";
 
 export const isExecuteOrbiterRouterV3 = (data: {
   fromCurrency: string;
@@ -314,22 +306,11 @@ export async function getZkSyncProvider(chainId: string) {
   }
 }
 
-export async function isFromChainIdMatchProvider(options: {
-  signer: Account | Signer;
-  fromChainInfo: IChainInfo;
-}) {
-  const { signer, fromChainInfo } = options;
-  let currentChainId: BigInt = 0n;
-  if ("getAddress" in signer) {
-    const currentNetwork = await signer.provider?.getNetwork();
-    currentChainId = currentNetwork?.chainId || 0n;
-    if (currentChainId !== BigInt(fromChainInfo.networkId)) {
-      return throwNewError("evm signer is not match with the source chain.");
-    }
-  } else {
-    if (!STARKNET_CHAIN_ID.includes(String(fromChainInfo.chainId)))
-      return throwNewError(
-        "starknet account is not match with the source chain."
-      );
+export async function isFromChainIdMatchProvider(fromChainInfo: IChainInfo) {
+  const currentChainId = fromChainInfo.chainId;
+  const currentNetworkId = fromChainInfo.networkId;
+  const targetId = (await getActiveChainId()).toString();
+  if (targetId !== currentNetworkId && targetId !== currentChainId) {
+    return throwNewError("current signer is not match with the source chain.");
   }
 }
