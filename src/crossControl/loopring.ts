@@ -203,7 +203,7 @@ export default {
       memo,
     };
     return isCounterFactual
-      ? await userApi.submitInternalTransfer(
+      ? ((await userApi.submitInternalTransfer(
           {
             request: OriginTransferRequestV3,
             web3,
@@ -213,14 +213,14 @@ export default {
             apiKey,
           },
           { accountId, counterFactualInfo: info.counterFactualInfo }
-        )
-      : await userApi.submitInternalTransfer({
+        )) as ILoopringResponse)
+      : ((await userApi.submitInternalTransfer({
           request: OriginTransferRequestV3,
           web3,
           chainId: networkId,
           walletType: ConnectorNames.Unknown,
           eddsaKey: eddsaKey.sk,
           apiKey,
-        });
+        })) as ILoopringResponse);
   },
 };

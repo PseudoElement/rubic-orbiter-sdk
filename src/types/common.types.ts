@@ -236,6 +236,12 @@ export type TBridgeResponse =
   | ILoopringResponse
   | TStarknetResponse;
 
+export type TRefundResponse =
+  | TStarknetResponse
+  | TransactionResponse
+  | ILoopringResponse
+  | ContractTransactionResponse;
+
 export interface IChainItem {
   chainId: string;
   networkId: string;

@@ -4,11 +4,23 @@ import {
   getContract,
   throwNewError,
 } from "../utils";
-import { Signer, ethers } from "ethers-6";
-import { Account, Contract, uint256 } from "starknet";
+import {
+  ContractTransactionResponse,
+  Signer,
+  TransactionResponse,
+  ethers,
+} from "ethers-6";
+import { Account, Contract, InvokeFunctionResponse, uint256 } from "starknet";
 import ChainsService from "./ChainsService";
 import TokensService from "./TokensService";
-import { IChainInfo, IToken, TAddress, TSymbol, TTokenName } from "../types";
+import {
+  IChainInfo,
+  IToken,
+  TAddress,
+  TRefundResponse,
+  TSymbol,
+  TTokenName,
+} from "../types";
 import { STARKNET_ERC20_ABI } from "../constant/abi";
 import Web3 from "web3";
 import { getGlobalState } from "../globalState";
@@ -32,13 +44,15 @@ export default class RefundService {
     return this.instance;
   }
 
-  public async toSend(params: {
+  public async toSend<
+    T extends TRefundResponse | InvokeFunctionResponse
+  >(params: {
     to: string;
     amount: number | string;
     token: TTokenName | TAddress | TSymbol;
     fromChainId: string | number;
     isLoopring?: boolean;
-  }): Promise<any> {
+  }): Promise<T> {
     const currentSigner = getActiveSigner<Web3 | Signer | Account>();
     if (!Object.keys(currentSigner).length)
       return throwNewError("can not send transfer without signer.");
@@ -83,6 +97,7 @@ export default class RefundService {
         account,
       });
     }
+    return throwNewError("refund error pls check it!");
   }
 
   private async sendToLoopring(options: {
@@ -165,7 +180,7 @@ export default class RefundService {
     fromChainId: string | number;
     tokenInfo: IToken;
     fromChainInfo: IChainInfo;
-  }) {
+  }): Promise<ContractTransactionResponse | TransactionResponse> {
     const currentSigner = getActiveSigner<Signer>();
     const {
       account,
@@ -199,7 +214,7 @@ export default class RefundService {
       });
     } else {
       const transferContract = getContract({
-        contractAddress: token,
+        contractAddress: tokenInfo.address,
         localChainID: fromChainId,
         signer: currentSigner,
       });
@@ -214,9 +229,9 @@ export default class RefundService {
         gasLimit = 21000n;
       }
 
-      return await transferContract.transfer(to, value, {
+      return (await transferContract.transfer(to, value, {
         gasLimit,
-      });
+      })) as ContractTransactionResponse;
     }
   }
 }

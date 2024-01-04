@@ -1,9 +1,4 @@
-import {
-  ContractTransactionResponse,
-  TransactionResponse,
-  Wallet,
-  ethers,
-} from "ethers-6";
+import { Wallet, ethers } from "ethers-6";
 import { Account, RpcProvider } from "starknet";
 import BigNumber from "bignumber.js";
 import { HexString } from "ethers-6/lib.commonjs/utils/data";
@@ -31,6 +26,7 @@ import {
   TSymbol,
   SIGNER_TYPES,
   TTokenName,
+  TRefundResponse,
 } from "../types";
 import { getActiveSigner, throwNewError } from "../utils";
 import { isFromChainIdMatchProvider } from "./utils";
@@ -233,18 +229,18 @@ export default class Orbiter {
     return await this.historyService.searchTransaction(txHash);
   };
 
-  toRefund = async (sendOptions: {
+  toRefund = async <T extends TRefundResponse>(sendOptions: {
     to: string;
     amount: number | string;
     token: TTokenName | TAddress | TSymbol;
     fromChainId: string | number;
     isLoopring?: boolean;
-  }): Promise<TransactionResponse | ContractTransactionResponse> => {
+  }): Promise<T> => {
     try {
       const fromChainInfo = await this.queryChainInfo(sendOptions.fromChainId);
 
       await isFromChainIdMatchProvider(fromChainInfo);
-      return await this.refundService.toSend(sendOptions);
+      return await this.refundService.toSend<T>(sendOptions);
     } catch (error: any) {
       console.log(error);
       return throwNewError(error.message);

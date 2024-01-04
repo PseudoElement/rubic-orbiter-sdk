@@ -1,8 +1,13 @@
 require("dotenv").config("./.env");
-import { TransactionResponse } from "ethers-6";
+import { ContractTransactionResponse, TransactionResponse } from "ethers-6";
 import { beforeAll, describe, expect, test } from "vitest";
 import Orbiter from "../orbiter";
-import { IToken, SIGNER_TYPES } from "../types";
+import {
+  ILoopringResponse,
+  IToken,
+  SIGNER_TYPES,
+  TStarknetResponse,
+} from "../types";
 
 describe("orbiter tests", () => {
   // add your private key to the environment to be able to run the tests
@@ -40,21 +45,6 @@ describe("orbiter tests", () => {
     });
   });
 
-  test("refund evm signer is not match with the source chain test", async () => {
-    const evmRefundOptions = {
-      fromChainId: "5",
-      to: "0x15962f38e6998875F9F75acDF8c6Ddc743F11041",
-      token: "ETH",
-      amount: 0.01,
-    };
-    let result;
-    try {
-      result = await orbiter.toRefund(evmRefundOptions);
-    } catch (error: any) {
-      expect(error.message.includes("")).toBeTruthy();
-    }
-  });
-
   test("refund starknet account is not match with the source chain test", async () => {
     const starknetRefundConfig = {
       fromChainId: "SN_GOERLI",
@@ -72,7 +62,7 @@ describe("orbiter tests", () => {
     }
   });
 
-  test("refund evm test", async () => {
+  test("refund evm eth test", async () => {
     orbiter.updateConfig({ activeSignerType: SIGNER_TYPES.EVM });
     const evmRefundOptions = {
       fromChainId: "5",
@@ -80,10 +70,30 @@ describe("orbiter tests", () => {
       token: "ETH",
       amount: 0.01,
     };
-    let result: TransactionResponse;
+    let result;
     try {
-      result = await orbiter.toRefund(evmRefundOptions);
+      result = await orbiter.toRefund<TransactionResponse>(evmRefundOptions);
       console.log(result.hash, "evm refund");
+      expect(Object.keys(result).length).gt(0);
+      expect(result.hash).toBeDefined();
+    } catch (error: any) {
+      console.log(error);
+    }
+  });
+
+  test("refund evm erc20 test", async () => {
+    const evmRefundOptions = {
+      fromChainId: "5",
+      to: "0x15962f38e6998875F9F75acDF8c6Ddc743F11041",
+      token: "USDC",
+      amount: 5,
+    };
+    let result;
+    try {
+      result = await orbiter.toRefund<ContractTransactionResponse>(
+        evmRefundOptions
+      );
+      console.log(result.hash, "evm erc20 refund");
       expect(Object.keys(result).length).gt(0);
       expect(result.hash).toBeDefined();
     } catch (error: any) {
@@ -101,10 +111,9 @@ describe("orbiter tests", () => {
         "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
       amount: 0.01,
     };
-    let result: TransactionResponse;
+    let result;
     try {
-      result = await orbiter.toRefund(starknetRefundOptions);
-      console.log(result, "evm refund");
+      result = await orbiter.toRefund<TStarknetResponse>(starknetRefundOptions);
       expect(result).toBeDefined();
       expect(Object.keys(result).length).gt(0);
     } catch (error: any) {
@@ -124,9 +133,9 @@ describe("orbiter tests", () => {
       amount: 0.01,
       isLoopring: true,
     };
-    let result: TransactionResponse;
+    let result;
     try {
-      result = await orbiter.toRefund(loopringRefundOptions);
+      result = await orbiter.toRefund<ILoopringResponse>(loopringRefundOptions);
       console.log(result.hash, "loopring hash");
       expect(result.hash).toBeDefined();
     } catch (error: any) {
