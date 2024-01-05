@@ -11,7 +11,6 @@ const {
   GlobalAPI,
   generateKeyPair,
   ConnectorNames,
-  RESULT_INFO,
 } = require("loopring-fix-web-sdk");
 
 const getNetworkId = (fromChainID: string) => {

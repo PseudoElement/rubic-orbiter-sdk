@@ -1,6 +1,6 @@
 require("dotenv").config("./.env");
 import { beforeAll, describe, expect, test } from "vitest";
-import Orbiter from "../orbiter";
+import { Orbiter } from "../orbiter";
 import { SIGNER_TYPES } from "../types";
 
 describe.only("bridge tests", () => {

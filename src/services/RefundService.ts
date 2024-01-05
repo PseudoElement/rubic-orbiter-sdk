@@ -4,13 +4,8 @@ import {
   getContract,
   throwNewError,
 } from "../utils";
-import {
-  ContractTransactionResponse,
-  Signer,
-  TransactionResponse,
-  ethers,
-} from "ethers-6";
-import { Account, Contract, InvokeFunctionResponse, uint256 } from "starknet";
+import { Signer, ethers } from "ethers-6";
+import { Account, Contract, uint256 } from "starknet";
 import ChainsService from "./ChainsService";
 import TokensService from "./TokensService";
 import {
@@ -44,9 +39,7 @@ export default class RefundService {
     return this.instance;
   }
 
-  public async toSend<
-    T extends TRefundResponse | InvokeFunctionResponse
-  >(params: {
+  public async toSend<T extends TRefundResponse>(params: {
     to: string;
     amount: number | string;
     token: TTokenName | TAddress | TSymbol;
@@ -75,11 +68,11 @@ export default class RefundService {
         tokenInfo,
         fromChainInfo,
       };
-      return await this.sendToLoopring(options);
+      return await this.sendToLoopring<T>(options);
     }
     if ("getAddress" in currentSigner) {
       account = await currentSigner.getAddress();
-      return await this.sendToEvm({
+      return await this.sendToEvm<T>({
         to,
         amount,
         token,
@@ -90,7 +83,7 @@ export default class RefundService {
       });
     } else if ("address" in currentSigner) {
       account = currentSigner.address;
-      return await this.sendToStarknet({
+      return await this.sendToStarknet<T>({
         to,
         amount,
         token,
@@ -100,7 +93,7 @@ export default class RefundService {
     return throwNewError("refund error pls check it!");
   }
 
-  private async sendToLoopring(options: {
+  private async sendToLoopring<T>(options: {
     account: string;
     to: string;
     amount: number | string;
@@ -108,7 +101,7 @@ export default class RefundService {
     fromChainId: string | number;
     tokenInfo: IToken;
     fromChainInfo: IChainInfo;
-  }) {
+  }): Promise<T> {
     const { account, to, amount, token, fromChainInfo } = options;
     const loopringSigner: Web3 = getGlobalState().loopringSigner;
     if (!Object.keys(loopringSigner).length) {
@@ -117,7 +110,7 @@ export default class RefundService {
       );
     }
     try {
-      return await loopring.sendTransfer(
+      return (await loopring.sendTransfer(
         loopringSigner,
         account,
         String(fromChainInfo.chainId),
@@ -125,7 +118,7 @@ export default class RefundService {
         token,
         ethers.parseUnits(String(amount)),
         ""
-      );
+      )) as T;
     } catch (error: any) {
       const errorEnum = {
         "account is not activated":
@@ -143,12 +136,12 @@ export default class RefundService {
     }
   }
 
-  private async sendToStarknet(options: {
+  private async sendToStarknet<T>(options: {
     account: string;
     to: string;
     amount: number | string;
     token: TTokenName | TAddress | TSymbol;
-  }) {
+  }): Promise<T> {
     const currentSigner = getActiveSigner<Account>();
     const { account, to, amount, token } = options;
     const erc20Contract = new Contract(
@@ -165,14 +158,14 @@ export default class RefundService {
           ...uint256.bnToUint256(ethers.parseUnits(String(amount))),
         },
       ]);
-      return await currentSigner.execute(transferERC20TxCall);
+      return (await currentSigner.execute(transferERC20TxCall)) as T;
     } catch (e) {
       console.log(e);
       return throwNewError("starknet refund error", e);
     }
   }
 
-  private async sendToEvm(options: {
+  private async sendToEvm<T>(options: {
     account: string;
     to: string;
     amount: number | string;
@@ -180,7 +173,7 @@ export default class RefundService {
     fromChainId: string | number;
     tokenInfo: IToken;
     fromChainInfo: IChainInfo;
-  }): Promise<ContractTransactionResponse | TransactionResponse> {
+  }): Promise<T> {
     const currentSigner = getActiveSigner<Signer>();
     const {
       account,
@@ -206,12 +199,12 @@ export default class RefundService {
       if (String(fromChainId) === "2" && gasLimit < 21000n) {
         gasLimit = 21000n;
       }
-      return await currentSigner.sendTransaction({
+      return (await currentSigner.sendTransaction({
         from: account,
         to,
         value,
         gasLimit,
-      });
+      })) as T;
     } else {
       const transferContract = getContract({
         contractAddress: tokenInfo.address,
@@ -231,7 +224,7 @@ export default class RefundService {
 
       return (await transferContract.transfer(to, value, {
         gasLimit,
-      })) as ContractTransactionResponse;
+      })) as T;
     }
   }
 }

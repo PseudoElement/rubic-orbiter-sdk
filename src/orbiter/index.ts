@@ -35,7 +35,7 @@ import HDWalletProvider from "@truffle/hdwallet-provider";
 import { CHAIN_ID_MAINNET, CHAIN_ID_TESTNET } from "../constant/common";
 import Web3 from "web3";
 
-export default class Orbiter {
+export class Orbiter {
   private static instance: Orbiter;
 
   private chainsService: ChainsService;

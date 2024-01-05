@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "vitest";
-import Orbiter from "../orbiter";
+import { Orbiter } from "../orbiter";
 
 describe.only("globalState tests", () => {
   let orbiter: Orbiter;

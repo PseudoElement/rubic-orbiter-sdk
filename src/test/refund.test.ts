@@ -1,7 +1,7 @@
 require("dotenv").config("./.env");
 import { ContractTransactionResponse, TransactionResponse } from "ethers-6";
 import { beforeAll, describe, expect, test } from "vitest";
-import Orbiter from "../orbiter";
+import { Orbiter } from "../orbiter";
 import {
   ILoopringResponse,
   IToken,
