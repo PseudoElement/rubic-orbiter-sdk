@@ -4,7 +4,6 @@ import { Orbiter } from "../orbiter";
 import {
   ILoopringResponse,
   TStarknetResponse,
-  SIGNER_TYPES,
   TContractTransactionResponse,
   TIMXTransactionResponse,
   TTransaction,
@@ -33,8 +32,6 @@ describe("orbiter tests", () => {
     orbiter.updateConfig({
       isMainnet: false,
       dealerId: "",
-      // default type is EVM
-      activeSignerType: SIGNER_TYPES.EVM,
       evmConfig: {
         privateKey: PRIVATE_KEY,
         providerUrl: GOERLI_RPC_URL || "",
@@ -153,9 +150,6 @@ describe("orbiter tests", () => {
   });
 
   test("loopring ETH cross test", async () => {
-    orbiter.updateConfig({
-      activeSignerType: SIGNER_TYPES.Loopring,
-    });
     const loopringCrossConfig = {
       fromChainID: "loopring_test",
       fromCurrency: "ETH",
@@ -171,7 +165,6 @@ describe("orbiter tests", () => {
   });
 
   test("starknet ETH cross to goerli test", async () => {
-    orbiter.updateConfig({ activeSignerType: SIGNER_TYPES.Starknet });
     let result;
     try {
       const starknetCrossConfig = {
@@ -191,7 +184,6 @@ describe("orbiter tests", () => {
   });
 
   test("transfer to starknet ETH cross by goerli test", async () => {
-    orbiter.updateConfig({ activeSignerType: SIGNER_TYPES.EVM });
     const starknetCrossConfig = {
       fromChainID: "5",
       fromCurrency: "ETH",
@@ -233,7 +225,6 @@ describe("orbiter tests", () => {
 
   test("evm erc20 cross test", async () => {
     orbiter.updateConfig({
-      activeSignerType: SIGNER_TYPES.EVM,
       evmConfig: {
         privateKey: PRIVATE_KEY,
         providerUrl: OP_GOERLI_RPC_URL || "",
@@ -259,7 +250,6 @@ describe("orbiter tests", () => {
   });
 
   test("evm signer is not match with the source chain test", async () => {
-    orbiter.updateConfig({ activeSignerType: SIGNER_TYPES.Starknet });
     const evmCrossConfig = {
       fromChainID: "5",
       fromCurrency: "USDC",

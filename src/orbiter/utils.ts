@@ -1,3 +1,6 @@
+import { isObject } from "lodash";
+import * as zksync from "zksync";
+import BigNumber from "bignumber.js";
 import {
   CHAIN_ID_MAINNET,
   CHAIN_ID_TESTNET,
@@ -5,11 +8,8 @@ import {
   SIZE_OP,
 } from "../constant/common";
 import { IChainInfo, ICrossRule, IRates, IToken } from "../types";
-import BigNumber from "bignumber.js";
 import { equalsIgnoreCase, getActiveChainId, throwNewError } from "../utils";
-import * as zksync from "zksync";
 import { queryRates } from "../services/ApiService";
-import { isObject } from "lodash";
 
 export const isExecuteOrbiterRouterV3 = (data: {
   fromCurrency: string;

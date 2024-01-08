@@ -1,7 +1,7 @@
+import { HexString } from "ethers-6/lib.commonjs/utils/data";
 import { queryRouter } from "./ApiService";
 import { IChainInfo, ICrossRule } from "../types";
 import { throwNewError } from "../utils";
-import { HexString } from "ethers-6/lib.commonjs/utils/data";
 import { getGlobalState } from "../globalState";
 
 export default class CrossRulesService {

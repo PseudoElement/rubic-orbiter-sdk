@@ -1,7 +1,7 @@
 import { Signer } from "ethers-6";
-import { IGlobalState, SIGNER_TYPES } from "./types";
 import Web3 from "web3";
 import { Account } from "starknet";
+import { IGlobalState, SIGNER_TYPES } from "./types";
 
 let globalState: IGlobalState = {
   isMainnet: true,

@@ -1,5 +1,5 @@
 import { AxiosResponse } from "axios";
-import Axios from "../request";
+import { HexString } from "ethers-6/lib.commonjs/utils/data";
 import {
   QueryRatesData,
   Rates,
@@ -12,8 +12,8 @@ import {
   TRouterResult,
   ICrossRule,
 } from "../types/common.types";
+import Axios from "../request";
 import { equalsIgnoreCase, throwNewError } from "../utils";
-import { HexString } from "ethers-6/lib.commonjs/utils/data";
 import { getGlobalState } from "../globalState";
 
 const QUERY_API_MENU = {
@@ -75,6 +75,7 @@ export async function queryTransactionByAddress(
       params: [account, pageNum, pageSize],
     });
     const result = res?.data?.result;
+    console.log(result);
     if (result && Object.keys(result).length > 0) {
       return {
         transactions: result.list ?? [],

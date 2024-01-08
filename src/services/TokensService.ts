@@ -1,3 +1,4 @@
+import { isArray } from "lodash";
 import {
   IToken,
   ITokensByChain,
@@ -7,7 +8,6 @@ import {
 } from "../types";
 import { throwNewError } from "../utils";
 import { queryTokens } from "./ApiService";
-import { isArray } from "lodash";
 
 export default class TokensService {
   private static instance: TokensService;

@@ -1,7 +1,8 @@
 import { Wallet, ethers } from "ethers-6";
 import { Account, RpcProvider } from "starknet";
 import BigNumber from "bignumber.js";
-import { HexString } from "ethers-6/lib.commonjs/utils/data";
+import HDWalletProvider from "@truffle/hdwallet-provider";
+import Web3 from "web3";
 import ChainsService from "../services/ChainsService";
 import CrossRulesService from "../services/RoutersService";
 import TokenService from "../services/TokensService";
@@ -28,12 +29,13 @@ import {
   TTokenName,
   TRefundResponse,
 } from "../types";
-import { getActiveSigner, throwNewError } from "../utils";
+import {
+  changeActiveSignerType,
+  getActiveSigner,
+  throwNewError,
+} from "../utils";
 import { isFromChainIdMatchProvider } from "./utils";
 import { getGlobalState, setGlobalState } from "../globalState";
-import HDWalletProvider from "@truffle/hdwallet-provider";
-import { CHAIN_ID_MAINNET, CHAIN_ID_TESTNET } from "../constant/common";
-import Web3 from "web3";
 
 export class Orbiter {
   private static instance: Orbiter;
@@ -50,7 +52,6 @@ export class Orbiter {
     setGlobalState({
       isMainnet: config?.isMainnet ?? true,
       dealerId: config?.dealerId || "",
-      activeSignerType: config?.activeSignerType || SIGNER_TYPES.EVM,
       evmSigner: this.generateSigner<TEvmConfig>(
         SIGNER_TYPES.EVM,
         config?.evmConfig
@@ -120,18 +121,11 @@ export class Orbiter {
   }
 
   updateConfig = (config: Partial<IOBridgeConfig>): void => {
-    const {
-      isMainnet,
-      dealerId,
-      activeSignerType,
-      evmSigner,
-      starknetSigner,
-      loopringSigner,
-    } = getGlobalState();
+    const { isMainnet, dealerId, evmSigner, starknetSigner, loopringSigner } =
+      getGlobalState();
     setGlobalState({
       isMainnet: config.isMainnet ?? isMainnet,
       dealerId: config?.dealerId || dealerId,
-      activeSignerType: config?.activeSignerType || activeSignerType,
       evmSigner: config?.evmConfig
         ? this.generateSigner<TEvmConfig>(SIGNER_TYPES.EVM, config?.evmConfig)
         : evmSigner,
@@ -203,7 +197,6 @@ export class Orbiter {
   };
 
   queryRouter = async (params: {
-    dealerId: string | HexString;
     fromChainInfo: IChainInfo;
     toChainInfo: IChainInfo;
     fromCurrency: string;
@@ -212,7 +205,7 @@ export class Orbiter {
     return await this.crossRulesService.queryRouter(params);
   };
 
-  getHistoryListAsync = async (params: {
+  queryHistoryList = async (params: {
     account: string;
     pageNum: number;
     pageSize: number;
@@ -223,9 +216,7 @@ export class Orbiter {
     return await this.historyService.queryHistoryList(params);
   };
 
-  searchTransaction = async (
-    txHash: string
-  ): Promise<ISearchTxResponse | undefined> => {
+  searchTransaction = async (txHash: string): Promise<ISearchTxResponse> => {
     return await this.historyService.searchTransaction(txHash);
   };
 
@@ -234,8 +225,8 @@ export class Orbiter {
     amount: number | string;
     token: TTokenName | TAddress | TSymbol;
     fromChainId: string | number;
-    isLoopring?: boolean;
   }): Promise<T> => {
+    changeActiveSignerType(sendOptions.fromChainId);
     try {
       const fromChainInfo = await this.queryChainInfo(sendOptions.fromChainId);
 
@@ -250,25 +241,11 @@ export class Orbiter {
   toBridge = async <T extends TBridgeResponse>(
     transferConfig: ITransferConfig
   ): Promise<T> => {
+    const { fromChainID, fromCurrency, toChainID, toCurrency, transferValue } =
+      transferConfig;
+    changeActiveSignerType(fromChainID);
     if (!getActiveSigner())
       throw new Error("Can not find signer, please check it!");
-    const {
-      fromChainID,
-      fromCurrency,
-      toChainID,
-      toCurrency,
-      transferValue,
-      transferExt,
-    } = transferConfig;
-    if (
-      (fromChainID === CHAIN_ID_MAINNET.loopring ||
-        fromChainID === CHAIN_ID_TESTNET.loopring_test) &&
-      !Object.keys(getGlobalState().loopringSigner).length
-    ) {
-      return throwNewError(
-        "should update loopring Signer by [updateConfig] function."
-      );
-    }
     const fromChainInfo = await this.queryChainInfo(fromChainID);
 
     await isFromChainIdMatchProvider(fromChainInfo);
@@ -278,7 +255,6 @@ export class Orbiter {
       throw new Error("Cant get ChainInfo by fromChainId or to toChainId.");
 
     const selectMakerConfig = await this.queryRouter({
-      dealerId: getGlobalState().dealerId,
       fromChainInfo,
       toChainInfo,
       fromCurrency,
@@ -302,7 +278,6 @@ export class Orbiter {
         fromChainInfo,
         toChainInfo,
         selectMakerConfig,
-        transferExt,
       });
     } catch (error) {
       return throwNewError("Bridge getCrossFunction error", error);

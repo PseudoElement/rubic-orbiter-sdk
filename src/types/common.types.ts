@@ -30,7 +30,6 @@ export enum SIGNER_TYPES {
 export interface IOBridgeConfig {
   dealerId: string | HexString;
   isMainnet: boolean;
-  activeSignerType: SIGNER_TYPES;
   evmConfig: TEvmConfig;
   starknetConfig: TStarknetConfig;
   loopringConfig: TLoopringConfig;
@@ -111,7 +110,6 @@ export interface ITransferConfig {
   toCurrency: string;
   transferValue: number;
   crossAddressReceipt?: string;
-  transferExt?: ITransferExt;
 }
 
 export interface ITokensByChain {
@@ -146,7 +144,6 @@ export interface ICrossFunctionParams {
   fromCurrency: string;
   toCurrency: string;
   crossAddressReceipt?: string;
-  transferExt?: ITransferExt;
 }
 
 export type TCrossConfig = ICrossFunctionParams & {

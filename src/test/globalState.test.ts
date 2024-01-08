@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "vitest";
 import { Orbiter } from "../orbiter";
 
-describe.only("globalState tests", () => {
+describe("globalState tests", () => {
   let orbiter: Orbiter;
 
   beforeAll(async () => {

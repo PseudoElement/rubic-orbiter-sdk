@@ -1,11 +1,18 @@
-import {
-  equalsIgnoreCase,
-  getActiveSigner,
-  getContract,
-  throwNewError,
-} from "../utils";
+import Web3 from "web3";
 import { Signer, ethers } from "ethers-6";
 import { Account, Contract, uint256 } from "starknet";
+import { STARKNET_ERC20_ABI } from "../constant/abi";
+import { getGlobalState } from "../globalState";
+import loopring from "../crossControl/loopring";
+import { isStarknet } from "../utils";
+import {
+  equalsIgnoreCase,
+  getActiveAccount,
+  getActiveSigner,
+  getContract,
+  isLoopring,
+  throwNewError,
+} from "../utils";
 import ChainsService from "./ChainsService";
 import TokensService from "./TokensService";
 import {
@@ -16,10 +23,6 @@ import {
   TSymbol,
   TTokenName,
 } from "../types";
-import { STARKNET_ERC20_ABI } from "../constant/abi";
-import Web3 from "web3";
-import { getGlobalState } from "../globalState";
-import loopring from "../crossControl/loopring";
 
 export default class RefundService {
   private chainsService: ChainsService;
@@ -44,34 +47,28 @@ export default class RefundService {
     amount: number | string;
     token: TTokenName | TAddress | TSymbol;
     fromChainId: string | number;
-    isLoopring?: boolean;
   }): Promise<T> {
-    const currentSigner = getActiveSigner<Web3 | Signer | Account>();
-    if (!Object.keys(currentSigner).length)
-      return throwNewError("can not send transfer without signer.");
-    const { to, amount, token, fromChainId, isLoopring } = params;
+    const { to, amount, token, fromChainId } = params;
     if (!to || !amount || !token) return throwNewError("toSend params error.");
-    let account: string | Promise<string>;
     const tokenInfo = await this.tokensService.queryToken(fromChainId, token);
     if (!tokenInfo) return throwNewError("Without tokenInfo.");
-
     const fromChainInfo = await this.chainsService.queryChainInfo(fromChainId);
-    if (isLoopring) {
-      const account = await getActiveSigner<Web3>().eth.getAccounts();
+    const account = await getActiveAccount();
+
+    if (isLoopring(fromChainId)) {
       if (!account) return throwNewError("loopring refund`s account is error.");
       const options = {
         to,
         amount,
         token,
-        account: account[0],
+        account,
         fromChainId,
         tokenInfo,
         fromChainInfo,
       };
       return await this.sendToLoopring<T>(options);
     }
-    if ("getAddress" in currentSigner) {
-      account = await currentSigner.getAddress();
+    if (!isStarknet(fromChainId)) {
       return await this.sendToEvm<T>({
         to,
         amount,
@@ -81,16 +78,13 @@ export default class RefundService {
         tokenInfo,
         fromChainInfo,
       });
-    } else if ("address" in currentSigner) {
-      account = currentSigner.address;
-      return await this.sendToStarknet<T>({
-        to,
-        amount,
-        token,
-        account,
-      });
     }
-    return throwNewError("refund error pls check it!");
+    return await this.sendToStarknet<T>({
+      to,
+      amount,
+      token,
+      account,
+    });
   }
 
   private async sendToLoopring<T>(options: {

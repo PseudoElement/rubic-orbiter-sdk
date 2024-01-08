@@ -4,8 +4,6 @@ import {
 } from "./ApiService";
 import { ISearchTxResponse, ITransactionInfo } from "../types";
 import { throwNewError } from "../utils";
-import { Signer } from "ethers-6";
-import { Account } from "starknet";
 
 export default class HistoryService {
   private static instance: HistoryService;
@@ -31,15 +29,13 @@ export default class HistoryService {
     return await queryTransactionByAddress(account, pageNum, pageSize);
   }
 
-  public async searchTransaction(
-    txHash: string
-  ): Promise<ISearchTxResponse | undefined> {
+  public async searchTransaction(txHash: string): Promise<ISearchTxResponse> {
     try {
       if (!txHash) return throwNewError("searchTransaction param no [txHash].");
 
       return await queryTransactionByHash(txHash);
     } catch (error: any) {
-      throwNewError(error.message);
+      return throwNewError(error.message);
     }
   }
 }

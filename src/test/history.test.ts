@@ -1,9 +1,8 @@
 require("dotenv").config("./.env");
 import { beforeAll, describe, expect, test } from "vitest";
 import { Orbiter } from "../orbiter";
-import { SIGNER_TYPES } from "../types";
 
-describe.only("bridge tests", () => {
+describe("bridge tests", () => {
   // add your private key to the environment to be able to run the tests
   const PRIVATE_KEY = process.env.PRIVATE_KEY;
   const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
@@ -17,18 +16,11 @@ describe.only("bridge tests", () => {
       );
     orbiter = new Orbiter({
       isMainnet: false,
-      dealerId: "",
-      // default type is EVM
-      activeSignerType: SIGNER_TYPES.EVM,
-      evmConfig: {
-        privateKey: PRIVATE_KEY,
-        providerUrl: GOERLI_RPC_URL || "",
-      },
     });
   });
 
   test("get all history test", async () => {
-    const result = await orbiter.getHistoryListAsync({
+    const result = await orbiter.queryHistoryList({
       account: "0x15962f38e6998875F9F75acDF8c6Ddc743F11041",
       pageNum: 10,
       pageSize: 1,

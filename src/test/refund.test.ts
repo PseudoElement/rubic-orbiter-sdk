@@ -2,12 +2,7 @@ require("dotenv").config("./.env");
 import { ContractTransactionResponse, TransactionResponse } from "ethers-6";
 import { beforeAll, describe, expect, test } from "vitest";
 import { Orbiter } from "../orbiter";
-import {
-  ILoopringResponse,
-  IToken,
-  SIGNER_TYPES,
-  TStarknetResponse,
-} from "../types";
+import { ILoopringResponse, IToken, TStarknetResponse } from "../types";
 
 describe("orbiter tests", () => {
   // add your private key to the environment to be able to run the tests
@@ -28,7 +23,6 @@ describe("orbiter tests", () => {
       isMainnet: false,
       dealerId: "",
       // default type is EVM
-      activeSignerType: SIGNER_TYPES.EVM,
       evmConfig: {
         privateKey: PRIVATE_KEY,
         providerUrl: GOERLI_RPC_URL || "",
@@ -63,7 +57,6 @@ describe("orbiter tests", () => {
   });
 
   test("refund evm eth test", async () => {
-    orbiter.updateConfig({ activeSignerType: SIGNER_TYPES.EVM });
     const evmRefundOptions = {
       fromChainId: "5",
       to: "0x15962f38e6998875F9F75acDF8c6Ddc743F11041",
@@ -102,8 +95,6 @@ describe("orbiter tests", () => {
   });
 
   test("refund starknet test", async () => {
-    orbiter.updateConfig({ activeSignerType: SIGNER_TYPES.Starknet });
-
     const starknetRefundOptions = {
       fromChainId: "SN_GOERLI",
       to: "0x031eEf042A3C888287416b744eC5aaAb14E5994F9d88cF7b7a08D78748B077d1",
@@ -122,7 +113,6 @@ describe("orbiter tests", () => {
   });
 
   test("refund loopring test", async () => {
-    orbiter.updateConfig({ activeSignerType: SIGNER_TYPES.Loopring });
     const tokenInfo: IToken = await orbiter.queryToken("loopring_test", "ETH");
     const { address } = tokenInfo;
     expect(address).toBeDefined();
@@ -131,7 +121,6 @@ describe("orbiter tests", () => {
       to: "0x4cd8349054bd6f4d1f3384506d0b3a690d543954",
       token: address,
       amount: 0.01,
-      isLoopring: true,
     };
     let result;
     try {

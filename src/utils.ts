@@ -1,9 +1,17 @@
+import BigNumber from "bignumber.js";
 import { Signer, Contract, ethers } from "ethers-6";
 import { Coin_ABI } from "./constant/common";
-import { IChainInfo, ICrossRule, IToken, STARKNET_CHAIN_ID } from "./types";
-import BigNumber from "bignumber.js";
+import {
+  IChainInfo,
+  ICrossRule,
+  IToken,
+  SIGNER_TYPES,
+  STARKNET_CHAIN_ID,
+} from "./types";
 import { queryRatesByCurrency } from "./services/ApiService";
-import { getGlobalState } from "./globalState";
+import { getGlobalState, setGlobalState } from "./globalState";
+import { CHAIN_ID_MAINNET } from "./constant/common";
+import { CHAIN_ID_TESTNET } from "./constant/common";
 
 export const approveAndAllowanceCheck = async (params: {
   contractInstance: Contract;
@@ -285,4 +293,47 @@ export const getActiveChainId = async () => {
     default:
       return throwNewError("Can not find signer, please check it!");
   }
+};
+
+export const changeActiveSignerType = (fromChainID: string | number) => {
+  const currentFromChainID = String(fromChainID);
+  const { activeSignerType } = getGlobalState();
+  switch (currentFromChainID) {
+    case CHAIN_ID_MAINNET.loopring:
+    case CHAIN_ID_TESTNET.loopring_test:
+      activeSignerType !== SIGNER_TYPES.Loopring &&
+        setGlobalState({
+          activeSignerType: SIGNER_TYPES.Loopring,
+        });
+      break;
+    case CHAIN_ID_MAINNET.starknet:
+    case CHAIN_ID_TESTNET.starknet_test:
+      activeSignerType !== SIGNER_TYPES.Starknet &&
+        setGlobalState({
+          activeSignerType: SIGNER_TYPES.Starknet,
+        });
+      break;
+
+    default:
+      activeSignerType !== SIGNER_TYPES.EVM &&
+        setGlobalState({
+          activeSignerType: SIGNER_TYPES.EVM,
+        });
+      break;
+  }
+};
+
+export const isLoopring = (chainId: string | number) => {
+  const currentChainId = String(chainId);
+  return (
+    currentChainId === CHAIN_ID_MAINNET.loopring ||
+    currentChainId === CHAIN_ID_TESTNET.loopring_test
+  );
+};
+export const isStarknet = (chainId: string | number) => {
+  const currentChainId = String(chainId);
+  return (
+    currentChainId === CHAIN_ID_MAINNET.starknet ||
+    currentChainId === CHAIN_ID_TESTNET.starknet_test
+  );
 };
