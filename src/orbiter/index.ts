@@ -34,7 +34,7 @@ import {
   getActiveSigner,
   throwNewError,
 } from "../utils";
-import { isFromChainIdMatchProvider } from "./utils";
+import { getTransferValue, isFromChainIdMatchProvider } from "./utils";
 import { getGlobalState, setGlobalState } from "../globalState";
 
 export class Orbiter {
@@ -218,6 +218,27 @@ export class Orbiter {
 
   searchTransaction = async (txHash: string): Promise<ISearchTxResponse> => {
     return await this.historyService.searchTransaction(txHash);
+  };
+
+  queryReceiveValue = async (options: {
+    ruleConfig: ICrossRule;
+    transferValue: string | number;
+  }) => {
+    const { ruleConfig, transferValue } = options;
+    if (!Object.keys(ruleConfig).length || !transferValue)
+      return throwNewError("queryReceiveValue params error, please check it!");
+    const { srcChain, srcToken } = ruleConfig;
+    const fromChainToken = await TokenService.getInstance().queryToken(
+      srcChain,
+      srcToken
+    );
+    const tValue = getTransferValue({
+      transferValue,
+      decimals: fromChainToken.decimals,
+      selectMakerConfig: ruleConfig,
+    });
+    if (!tValue.state) return throwNewError("queryReceiveValue error.");
+    return tValue.tAmount;
   };
 
   toRefund = async <T extends TRefundResponse>(sendOptions: {

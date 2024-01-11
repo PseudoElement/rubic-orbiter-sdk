@@ -25,7 +25,12 @@ import {
   isEthTokenAddress,
   throwNewError,
 } from "../utils";
-import { ICrossFunctionParams, TBridgeResponse, TCrossConfig } from "../types";
+import {
+  ICrossFunctionParams,
+  ICrossRule,
+  TBridgeResponse,
+  TCrossConfig,
+} from "../types";
 import {
   CHAIN_ID_MAINNET,
   CHAIN_ID_TESTNET,
@@ -70,7 +75,6 @@ export default class CrossControl {
       toChainID,
       selectMakerConfig,
       fromChainInfo,
-      toChainInfo,
       transferValue,
     } = crossParams;
     const tokenAddress = selectMakerConfig.srcToken;
@@ -98,10 +102,6 @@ export default class CrossControl {
     ).toString();
     try {
       const tValue = getTransferValue({
-        fromChainInfo,
-        toChainInfo,
-        toChainID,
-        fromChainID,
         transferValue,
         decimals: fromTokenInfo.decimals,
         selectMakerConfig,

@@ -65,43 +65,25 @@ export const isStarkNet = (fromChainID: string, toChainID: string) => {
 };
 
 export const getTransferValue = (transferInfo: {
-  toChainID: string;
-  fromChainID: string | number;
-  fromChainInfo: IChainInfo;
-  toChainInfo: IChainInfo;
-  transferValue: number;
+  transferValue: number | string;
   decimals: number;
   selectMakerConfig: ICrossRule;
 }) => {
-  const {
-    fromChainID,
-    transferValue,
-    fromChainInfo,
-    decimals,
-    selectMakerConfig,
-  } = transferInfo;
+  const { transferValue, decimals, selectMakerConfig } = transferInfo;
+  const fromChainID = selectMakerConfig.srcChain;
   const rAmount = new BigNumber(transferValue)
     .plus(new BigNumber(selectMakerConfig.withholdingFee))
     .multipliedBy(new BigNumber(10 ** decimals));
   const rAmountValue = rAmount.toFixed();
   const p_text = selectMakerConfig.vc;
-  return getTAmountFromRAmount(
-    fromChainID,
-    rAmountValue,
-    p_text,
-    fromChainInfo
-  );
+  return getTAmountFromRAmount(fromChainID, rAmountValue, p_text);
 };
 
 function getTAmountFromRAmount(
   chain: string | number,
   amount: string,
-  pText: string,
-  fromChainInfo: IChainInfo
+  pText: string
 ) {
-  if (!fromChainInfo) {
-    throw new Error("The chain did not support");
-  }
   if (BigInt(amount) < 1) {
     throw new Error(`the token doesn't support that many decimal digits`);
   }
