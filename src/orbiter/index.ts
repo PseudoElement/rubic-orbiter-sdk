@@ -220,17 +220,21 @@ export class Orbiter {
     return await this.historyService.searchTransaction(txHash);
   };
 
-  queryReceiveValue = async (options: {
+  queryReceiveTokenInfo = async (options: {
     ruleConfig: ICrossRule;
     transferValue: string | number;
   }) => {
     const { ruleConfig, transferValue } = options;
     if (!Object.keys(ruleConfig).length || !transferValue)
       return throwNewError("queryReceiveValue params error, please check it!");
-    const { srcChain, srcToken } = ruleConfig;
-    const fromChainToken = await TokenService.getInstance().queryToken(
+    const { srcChain, srcToken, tgtChain, tgtToken } = ruleConfig;
+    const fromChainToken = await this.tokensService.queryToken(
       srcChain,
       srcToken
+    );
+    const toChainToken = await this.tokensService.queryToken(
+      tgtChain,
+      tgtToken
     );
     const tValue = getTransferValue({
       transferValue,
@@ -238,7 +242,7 @@ export class Orbiter {
       selectMakerConfig: ruleConfig,
     });
     if (!tValue.state) return throwNewError("queryReceiveValue error.");
-    return tValue.tAmount;
+    return { receiveAmount: tValue.tAmount, decimals: toChainToken.decimals };
   };
 
   toRefund = async <T extends TRefundResponse>(sendOptions: {
