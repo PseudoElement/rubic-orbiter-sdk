@@ -1,4 +1,4 @@
-import { Wallet, ethers } from "ethers-6";
+import { Wallet, ethers, formatUnits } from "ethers-6";
 import { Account, RpcProvider } from "starknet";
 import BigNumber from "bignumber.js";
 import HDWalletProvider from "@truffle/hdwallet-provider";
@@ -36,6 +36,8 @@ import {
 } from "../utils";
 import { getTransferValue, isFromChainIdMatchProvider } from "./utils";
 import { getGlobalState, setGlobalState } from "../globalState";
+import { BASE_TRADE_FEE } from "../constant/common";
+import { queryRatesByCurrency } from "../services/ApiService";
 
 export class Orbiter {
   private static instance: Orbiter;
@@ -95,15 +97,18 @@ export class Orbiter {
       case SIGNER_TYPES.Loopring:
         Web3.providers.HttpProvider.prototype.sendAsync =
           Web3.providers.HttpProvider.prototype.send;
-        const hdSigner: any = new HDWalletProvider({
-          privateKeys: [privateKey],
-          providerOrUrl: providerUrl,
-        });
+        const hdSigner: any =
+          privateKey &&
+          providerUrl &&
+          new HDWalletProvider({
+            privateKeys: [privateKey],
+            providerOrUrl: providerUrl,
+          });
         return new Web3(hdSigner);
 
       case SIGNER_TYPES.Starknet:
         const provider = new RpcProvider({ nodeUrl: providerUrl || "" });
-        return starknetAddress
+        return privateKey && starknetAddress
           ? new Account(provider, starknetAddress, privateKey)
           : ({} as T["signer"]);
 
@@ -220,14 +225,38 @@ export class Orbiter {
     return await this.historyService.searchTransaction(txHash);
   };
 
-  queryReceiveTokenInfo = async (options: {
+  queryRealSendAmount = async (options: {
     ruleConfig: ICrossRule;
     transferValue: string | number;
   }) => {
     const { ruleConfig, transferValue } = options;
     if (!Object.keys(ruleConfig).length || !transferValue)
-      return throwNewError("queryReceiveValue params error, please check it!");
-    const { srcChain, srcToken, tgtChain, tgtToken } = ruleConfig;
+      return throwNewError(
+        "queryRealSendAmount params error, please check it!"
+      );
+    const { srcChain, srcToken } = ruleConfig;
+    const fromChainToken = await this.tokensService.queryToken(
+      srcChain,
+      srcToken
+    );
+    const tValue = getTransferValue({
+      transferValue,
+      decimals: fromChainToken.decimals,
+      selectMakerConfig: ruleConfig,
+    });
+    if (!tValue.state) return throwNewError("queryRealSendAmount error.");
+    return {
+      sendAmount: tValue.tAmount,
+      decimals: fromChainToken.decimals,
+      formatSendAmount: formatUnits(tValue.tAmount, fromChainToken.decimals),
+    };
+  };
+
+  queryReceiveAmount = async (
+    transferValue: number,
+    ruleConfig: ICrossRule
+  ) => {
+    const { srcChain, tgtChain, srcToken, tgtToken, tradeFee } = ruleConfig;
     const fromChainToken = await this.tokensService.queryToken(
       srcChain,
       srcToken
@@ -236,13 +265,24 @@ export class Orbiter {
       tgtChain,
       tgtToken
     );
-    const tValue = getTransferValue({
-      transferValue,
-      decimals: fromChainToken.decimals,
-      selectMakerConfig: ruleConfig,
-    });
-    if (!tValue.state) return throwNewError("queryReceiveValue error.");
-    return { receiveAmount: tValue.tAmount, decimals: toChainToken.decimals };
+    const fromTokenSymbol = fromChainToken.symbol;
+    const toTokenSymbol = toChainToken.symbol;
+    if (fromTokenSymbol === toTokenSymbol) {
+      return new BigNumber(transferValue)
+        .multipliedBy(1 - Number(tradeFee) / BASE_TRADE_FEE)
+        .toString();
+    } else {
+      const exchangeRates = await queryRatesByCurrency("ETH");
+      if (!exchangeRates) return throwNewError("get rate fail");
+      const fromRate = exchangeRates[fromTokenSymbol];
+      const toRate = exchangeRates[toTokenSymbol];
+      const slippage = ruleConfig?.slippage || 0;
+      if (!fromRate || !toRate || !slippage) {
+        return throwNewError("get rate fail");
+      }
+      // TODO: add cross token
+      return 0;
+    }
   };
 
   toRefund = async <T extends TRefundResponse>(sendOptions: {

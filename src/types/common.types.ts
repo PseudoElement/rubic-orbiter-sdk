@@ -10,8 +10,8 @@ import Web3 from "web3";
 
 export interface ISignerConfig<T> {
   signer?: T;
-  privateKey: string | HexString;
-  providerUrl: string;
+  privateKey?: string | HexString;
+  providerUrl?: string;
   starknetAddress?: string;
 }
 
@@ -132,6 +132,7 @@ export interface ICrossRule {
   state: string;
   compRatio: number;
   spentTime: number;
+  slippage?: number;
 }
 
 export interface ICrossFunctionParams {

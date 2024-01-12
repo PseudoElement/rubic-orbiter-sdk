@@ -24,7 +24,7 @@ describe("receive value tests", () => {
       compRatio: 1,
       spentTime: 60,
     };
-    const result = await orbiter.queryReceiveValue({
+    const result = await orbiter.queryRealSendAmount({
       ruleConfig,
       transferValue: 5,
     });

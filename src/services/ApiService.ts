@@ -49,7 +49,7 @@ export async function queryRatesByCurrency(
     );
     const data = resp.data;
     if (!data || equalsIgnoreCase(data.currency, currency) || !data.rates) {
-      return undefined;
+      return throwNewError("can`t search rates, please retry.");
     }
     return data.rates;
   } catch (error: any) {

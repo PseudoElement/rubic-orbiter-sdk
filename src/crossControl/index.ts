@@ -50,9 +50,10 @@ import { getGlobalState } from "../globalState";
 export default class CrossControl {
   private static instance: CrossControl;
   private crossConfig: TCrossConfig = {} as TCrossConfig;
-  private signer: Signer | Account | any = null as unknown as
+  private signer: Signer | Account | Web3 | any = null as unknown as
     | Signer
     | Account
+    | Web3
     | any;
 
   constructor() {}
@@ -244,20 +245,11 @@ export default class CrossControl {
       tValue,
       isETH,
     } = this.crossConfig;
-    let gasLimit = await this.signer.estimateGas({
-      from: account,
-      to: selectMakerConfig.endpoint,
-      value: tValue?.tAmount,
-    });
-    if (Number(fromChainID) === 2 && gasLimit < 21000) {
-      gasLimit = 21000n;
-    }
     if (isETH) {
       const tx: T = await this.signer.sendTransaction({
         from: account,
         to: selectMakerConfig.endpoint,
         value: tValue?.tAmount,
-        gasLimit,
       });
       return tx;
     } else {
@@ -272,19 +264,9 @@ export default class CrossControl {
         );
       }
       try {
-        gasLimit =
-          String(fromChainID) === "42161" && gasLimit < 21000
-            ? 21000
-            : await transferContract.transfer.estimateGas(
-                selectMakerConfig.endpoint,
-                tValue?.tAmount
-              );
         return (await transferContract.transfer(
           selectMakerConfig.endpoint,
-          tValue?.tAmount,
-          {
-            gasLimit,
-          }
+          tValue?.tAmount
         )) as T;
       } catch (error) {
         return throwNewError("evm transfer error", error);

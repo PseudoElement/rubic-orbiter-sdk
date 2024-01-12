@@ -120,3 +120,5 @@ export const GAS_ADDRESS = {
 
 export const CONTRACT_TYPE_SOURCE = "OBSource";
 export const CONTRACT_TYPE_ROUTER_V3 = "OrbiterRouterV3";
+
+export const BASE_TRADE_FEE = 1000000;

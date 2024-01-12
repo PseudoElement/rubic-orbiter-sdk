@@ -84,7 +84,7 @@ export default class TokensService {
   public async queryToken(
     chainId: string | number,
     token: TTokenName | TAddress | TSymbol
-  ) {
+  ): Promise<IToken> {
     await this.checkLoading();
     const targetChainTokensInfo = this.tokens[String(chainId)] || [];
     if (!targetChainTokensInfo.length)
