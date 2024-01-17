@@ -268,9 +268,12 @@ export class Orbiter {
     const fromTokenSymbol = fromChainToken.symbol;
     const toTokenSymbol = toChainToken.symbol;
     if (fromTokenSymbol === toTokenSymbol) {
-      return new BigNumber(transferValue)
-        .multipliedBy(1 - Number(tradeFee) / BASE_TRADE_FEE)
-        .toString();
+      const digit = fromChainToken.decimals === 18 ? 8 : 5;
+      const gasFee_fix = new BigNumber(transferValue)
+        .multipliedBy(tradeFee)
+        .dividedBy(BASE_TRADE_FEE)
+        .decimalPlaces(digit, BigNumber.ROUND_UP);
+      return new BigNumber(transferValue).minus(gasFee_fix).toString();
     } else {
       const exchangeRates = await queryRatesByCurrency("ETH");
       if (!exchangeRates) return throwNewError("get rate fail");
