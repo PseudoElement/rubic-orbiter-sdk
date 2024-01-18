@@ -314,7 +314,9 @@ export default class CrossControl {
         accountID
       );
       const ethSignature = (
-        await syncWallet.getEthMessageSignature(changePubKeyMessage)
+        await syncWallet
+          .ethMessageSigner()
+          .getEthMessageSignature(changePubKeyMessage)
       ).signature;
       const keyFee = await syncProvider.getTransactionFee(
         {
@@ -347,6 +349,8 @@ export default class CrossControl {
         fee: transferFee.totalFee,
       });
       const batchTransactionData = await batchBuilder.build();
+      if (!batchTransactionData.signature)
+        return throwNewError("zksync batch Data error.");
       const transactions: Transaction[] = await submitSignedTransactionsBatch(
         syncWallet.provider,
         batchTransactionData.txs,
