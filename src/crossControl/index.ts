@@ -25,12 +25,7 @@ import {
   isEthTokenAddress,
   throwNewError,
 } from "../utils";
-import {
-  ICrossFunctionParams,
-  ICrossRule,
-  TBridgeResponse,
-  TCrossConfig,
-} from "../types";
+import { ICrossFunctionParams, TBridgeResponse, TCrossConfig } from "../types";
 import {
   CHAIN_ID_MAINNET,
   CHAIN_ID_TESTNET,

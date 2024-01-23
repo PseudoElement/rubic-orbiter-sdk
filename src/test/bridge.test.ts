@@ -131,7 +131,7 @@ describe("orbiter tests", () => {
     expect(result && result.hash).toBeDefined();
   });
 
-  test("zksync ETH cross to op test", async () => {
+  test("zksync lite ETH cross to op test", async () => {
     const zksyncCrossConfig = {
       fromChainID: "zksync_test",
       fromCurrency: "ETH",
@@ -145,7 +145,7 @@ describe("orbiter tests", () => {
     } catch (error: any) {
       console.log(error.message);
     }
-    console.log(result && result.txHash, "zksync hash");
+    console.log(result && result.txHash, "zksync lite hash");
     expect(result && result.txHash).toBeDefined();
   });
 

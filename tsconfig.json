@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
     "lib": [
-      "es2020",
-      "es5"  ,
-      "dom"
+      "ESNext",
+      "ES2020",
+      "ES5",
+      "DOM"
     ],
     "declaration": true /* Generates corresponding '.d.ts' file. */,
     "declarationMap": true,
@@ -21,7 +22,7 @@
     "moduleResolution": "Node",
     "outDir": "./dist" /* Redirect output structure to the directory. */,
     "strict": true,
-    "target": "ES2022",
+    "target": "ESNext",
   },
   "include": [
     "src",
