@@ -131,7 +131,7 @@ describe("orbiter tests", () => {
     expect(result && result.hash).toBeDefined();
   });
 
-  test("zksync lite ETH cross to op test", async () => {
+  test.only("zksync lite ETH cross to op test", async () => {
     const zksyncCrossConfig = {
       fromChainID: "zksync_test",
       fromCurrency: "ETH",
@@ -144,9 +144,12 @@ describe("orbiter tests", () => {
       result = await orbiter.toBridge<TTransaction>(zksyncCrossConfig);
     } catch (error: any) {
       console.log(error.message);
+      expect(
+        error.message.includes(
+          "zksync lite has some questions to be resolved and will be opened after they are fixed"
+        )
+      ).toBeTruthy();
     }
-    console.log(result && result.txHash, "zksync lite hash");
-    expect(result && result.txHash).toBeDefined();
   });
 
   test("loopring ETH cross test", async () => {

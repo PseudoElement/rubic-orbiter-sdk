@@ -1,5 +1,4 @@
 import { isObject } from "lodash";
-import * as zksync from "zksync";
 import BigNumber from "bignumber.js";
 import {
   CHAIN_ID_MAINNET,
@@ -272,19 +271,6 @@ export async function getRates(currency: string) {
     return data.rates;
   } catch (error: any) {
     return throwNewError(error);
-  }
-}
-
-export async function getZkSyncProvider(chainId: string) {
-  switch (chainId) {
-    case CHAIN_ID_TESTNET.zksync_test:
-      return await zksync.Provider.newHttpProvider(
-        "https://goerli-api.zksync.io/jsrpc"
-      );
-    case CHAIN_ID_MAINNET.zksync:
-      return await zksync.getDefaultProvider("mainnet");
-    default:
-      throw new Error(`chainId ${chainId} not supported yet!`);
   }
 }
 
