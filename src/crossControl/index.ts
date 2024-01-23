@@ -6,11 +6,7 @@ import BigNumber from "bignumber.js";
 import { ERC20TokenType, ETHTokenType } from "@imtbl/imx-sdk";
 import { CrossAddress } from "../crossAddress/crossAddress";
 import loopring from "./loopring";
-import {
-  getTransferValue,
-  getZkSyncProvider,
-  isExecuteOrbiterRouterV3,
-} from "../orbiter/utils";
+import { getTransferValue, isExecuteOrbiterRouterV3 } from "../orbiter/utils";
 import {
   getActiveAccount,
   getContract,
