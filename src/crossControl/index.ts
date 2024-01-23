@@ -4,12 +4,6 @@ import Web3 from "web3";
 import { Account } from "starknet";
 import BigNumber from "bignumber.js";
 import { ERC20TokenType, ETHTokenType } from "@imtbl/imx-sdk";
-import {
-  submitSignedTransactionsBatch,
-  Transaction,
-  utils,
-  Wallet,
-} from "zksync";
 import { CrossAddress } from "../crossAddress/crossAddress";
 import loopring from "./loopring";
 import {
@@ -151,7 +145,9 @@ export default class CrossControl {
     switch (fromChainID) {
       case CHAIN_ID_MAINNET.zksync:
       case CHAIN_ID_TESTNET.zksync_test:
-        return await this.zkTransfer();
+        return throwNewError(
+          "zksync lite has some questions to be resolved and will be opened after they are fixed"
+        );
       case CHAIN_ID_MAINNET.loopring:
       case CHAIN_ID_TESTNET.loopring_test:
         return await this.loopringTransfer();
@@ -265,109 +261,6 @@ export default class CrossControl {
         )) as T;
       } catch (error) {
         return throwNewError("evm transfer error", error);
-      }
-    }
-  }
-  private async zkTransfer<T>(): Promise<T> {
-    const { selectMakerConfig, fromChainID, tValue } = this.crossConfig;
-    const tokenAddress = selectMakerConfig.srcToken;
-    const syncProvider = await getZkSyncProvider(fromChainID);
-    // @ts-ignore
-    const syncWallet = await Wallet.fromEthSigner(this.signer, syncProvider);
-    if (!syncWallet.signer)
-      return throwNewError("zksync get sync wallet signer error.");
-    const amount = utils.closestPackableTransactionAmount(
-      tValue.tAmount.toString()
-    );
-    const transferFee = await syncProvider.getTransactionFee(
-      "Transfer",
-      syncWallet.address() || "",
-      tokenAddress
-    );
-    if (!(await syncWallet.isSigningKeySet())) {
-      const nonce = await syncWallet.getNonce("committed");
-      const batchBuilder = syncWallet.batchBuilder(nonce);
-      if (syncWallet.ethSignerType?.verificationMethod === "ERC-1271") {
-        const isOnchainAuthSigningKeySet =
-          await syncWallet.isOnchainAuthSigningKeySet();
-        if (!isOnchainAuthSigningKeySet) {
-          const onchainAuthTransaction =
-            await syncWallet.onchainAuthSigningKey();
-          await onchainAuthTransaction?.wait();
-        }
-      }
-      const newPubKeyHash = (await syncWallet.signer.pubKeyHash()) || "";
-      const accountID = await syncWallet.getAccountId();
-      if (typeof accountID !== "number") {
-        return throwNewError(
-          "It is required to have a history of balances on the account to activate it."
-        );
-      }
-      const changePubKeyMessage = utils.getChangePubkeyLegacyMessage(
-        newPubKeyHash,
-        nonce,
-        accountID
-      );
-      const ethSignature = (
-        await syncWallet
-          .ethMessageSigner()
-          .getEthMessageSignature(changePubKeyMessage)
-      ).signature;
-      const keyFee = await syncProvider.getTransactionFee(
-        {
-          ChangePubKey: { onchainPubkeyAuth: false },
-        },
-        syncWallet.address() || "",
-        tokenAddress
-      );
-
-      const changePubKeyTx = await syncWallet.signer.signSyncChangePubKey({
-        accountId: accountID,
-        account: syncWallet.address(),
-        newPkHash: newPubKeyHash,
-        nonce,
-        ethSignature,
-        validFrom: 0,
-        validUntil: utils.MAX_TIMESTAMP,
-        fee: keyFee.totalFee,
-        feeTokenId: syncWallet.provider.tokenSet.resolveTokenId(tokenAddress),
-      });
-      batchBuilder.addChangePubKey({
-        tx: changePubKeyTx,
-        // @ts-ignore
-        alreadySigned: true,
-      });
-      batchBuilder.addTransfer({
-        to: selectMakerConfig.endpoint,
-        token: tokenAddress,
-        amount,
-        fee: transferFee.totalFee,
-      });
-      const batchTransactionData = await batchBuilder.build();
-      if (!batchTransactionData.signature)
-        return throwNewError("zksync batch Data error.");
-      const transactions: Transaction[] = await submitSignedTransactionsBatch(
-        syncWallet.provider,
-        batchTransactionData.txs,
-        [batchTransactionData.signature]
-      );
-      let transaction;
-      for (const tx of transactions) {
-        if (tx.txData.tx.type !== "ChangePubKey") {
-          transaction = tx;
-          break;
-        }
-      }
-      return transaction as T;
-    } else {
-      try {
-        return (await syncWallet.syncTransfer({
-          to: selectMakerConfig.endpoint,
-          token: tokenAddress,
-          amount,
-        })) as T;
-      } catch (error) {
-        return throwNewError("sync wallet syncTransfer was wrong", error);
       }
     }
   }
