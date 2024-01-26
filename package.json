@@ -1,16 +1,28 @@
 {
   "name": "orbiter-bridge-sdk",
-  "version": "1.1.39",
+  "version": "1.1.42",
   "description": "Orbiter cross rollup SDK",
-  "main": "./dist/index.js",
-  "module": "./dist/cjs/index.js",
+  "author": "Alan <alanseveryzoer@gmail.com>",
+  "license": "ISC",
+  "main": "./dist/orbiter-bridge-SDK.cjs.js",
+  "module": "./dist/orbiter-bridge-SDK.esm.js",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/orbiter-bridge-SDK.esm.js",
+      "default": {
+        "types": "./dist/orbiter-bridge-SDK.d.ts",
+        "default": "./dist/orbiter-bridge-SDK.cjs.js"
+      }
+    }
+  },
   "types": "./dist/index.d.ts",
   "scripts": {
     "test": "vitest --run --dangerouslyIgnoreUnhandledErrors",
-    "build": "tsc --project ./tsconfig.json && tsc --project ./tsconfig.cjs.json"
+    "build": "npx rollup --config rollup.config.js --bundleConfigAsCjs"
   },
   "files": [
-    "dist"
+    "/dist",
+    "/src"
   ],
   "keywords": [
     "sdk",
@@ -30,8 +42,6 @@
   "bugs": {
     "url": "https://github.com/Orbiter-Finance/OB_BridgeSDK/issues"
   },
-  "author": "Alan <alanseveryzoer@gmail.com>",
-  "license": "ISC",
   "dependencies": {
     "@imtbl/imx-sdk": "^1.5.0",
     "@truffle/hdwallet-provider": "^2.1.15",
@@ -44,10 +54,15 @@
     "web3": "^1.7.4"
   },
   "devDependencies": {
+    "@rollup/plugin-replace": "^5.0.5",
     "@types/lodash": "^4.14.202",
+    "@types/rollup": "^0.54.0",
     "@types/web3": "^1.2.2",
     "dotenv": "^16.3.1",
     "lodash": "^4.17.21",
+    "rollup": "^4.9.6",
+    "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-typescript2": "^0.36.0",
     "typescript": "^5.3.3",
     "vitest": "^0.34.6"
   }

@@ -5,7 +5,6 @@ import {
 } from "ethers-6";
 import { HexString } from "ethers-6/lib.commonjs/utils/data";
 import { Account, InvokeFunctionResponse } from "starknet";
-import { Transaction } from "zksync";
 import Web3 from "web3";
 
 export interface ISignerConfig<T> {
@@ -204,7 +203,6 @@ interface IImxTransactionResponse {
 
 export type TContractTransactionResponse = ContractTransactionResponse;
 export type TTransactionResponse = TransactionResponse;
-export type TTransaction = Transaction;
 export type TIMXTransactionResponse = IImxTransactionResponse;
 
 export type ILoopringResponse = {
@@ -229,7 +227,6 @@ export type TStarknetResponse = InvokeFunctionResponse;
 export type TBridgeResponse =
   | TContractTransactionResponse
   | TTransactionResponse
-  | TTransaction
   | TIMXTransactionResponse
   | ILoopringResponse
   | TStarknetResponse;

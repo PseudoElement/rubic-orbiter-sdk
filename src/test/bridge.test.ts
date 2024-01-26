@@ -6,7 +6,6 @@ import {
   TStarknetResponse,
   TContractTransactionResponse,
   TIMXTransactionResponse,
-  TTransaction,
   TTransactionResponse,
 } from "../types";
 
@@ -131,7 +130,8 @@ describe("orbiter tests", () => {
     expect(result && result.hash).toBeDefined();
   });
 
-  test.only("zksync lite ETH cross to op test", async () => {
+  // zksync-lite is temporarily offline
+  test("zksync lite ETH cross to op test", async () => {
     const zksyncCrossConfig = {
       fromChainID: "zksync_test",
       fromCurrency: "ETH",
@@ -141,7 +141,7 @@ describe("orbiter tests", () => {
     };
     let result;
     try {
-      result = await orbiter.toBridge<TTransaction>(zksyncCrossConfig);
+      result = await orbiter.toBridge(zksyncCrossConfig);
     } catch (error: any) {
       console.log(error.message);
       expect(

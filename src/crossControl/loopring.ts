@@ -1,17 +1,16 @@
-import Web3 from "web3";
 import config from "../constant/config";
 import { CHAIN_ID_MAINNET } from "../constant/common";
 import Axios from "../request";
 import { AccountInfo, ILoopringResponse } from "../types";
 import { sleep } from "../utils";
-const {
+import {
   ChainId,
   UserAPI,
   ExchangeAPI,
   GlobalAPI,
   generateKeyPair,
   ConnectorNames,
-} = require("loopring-fix-web-sdk");
+} from "loopring-fix-web-sdk";
 
 const getNetworkId = (fromChainID: string) => {
   return fromChainID === CHAIN_ID_MAINNET.loopring
@@ -102,7 +101,7 @@ export default {
   },
 
   sendTransfer: async function (
-    signer: Web3,
+    signer: any,
     address: string,
     fromChainID: string,
     toAddress: string,
