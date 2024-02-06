@@ -437,6 +437,7 @@ export default class CrossControl {
       return (await imxClient.transfer({
         sender: account,
         token: tokenInfo,
+        //@ts-ignore
         quantity: ethers.BigNumber.from(tValue.tAmount.toString()),
         receiver: selectMakerConfig.endpoint,
       })) as T;
